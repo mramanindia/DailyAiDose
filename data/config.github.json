@@ -1,0 +1,222 @@
+{
+  "version": "1.0",
+  "ai": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "temperature": 0.3,
+    "max_tokens": 8192,
+    "throttle_sec": 0,
+    "languages": ["en"],
+    "analysis_concurrency": 3,
+    "enrichment_concurrency": 2
+  },
+  "sources": {
+    "github": [
+      {
+        "type": "repo_releases",
+        "owner": "langfuse",
+        "repo": "langfuse",
+        "enabled": true
+      },
+      {
+        "type": "repo_releases",
+        "owner": "vllm-project",
+        "repo": "vllm",
+        "enabled": true
+      }
+    ],
+    "hackernews": {
+      "enabled": true,
+      "fetch_top_stories": 30,
+      "min_score": 80
+    },
+    "rss": [
+      {
+        "name": "OpenAI News",
+        "url": "https://openai.com/news/rss.xml",
+        "enabled": true,
+        "category": "ai-labs"
+      },
+      {
+        "name": "Google DeepMind Blog",
+        "url": "https://deepmind.google/blog/rss.xml",
+        "enabled": true,
+        "category": "ai-labs"
+      },
+      {
+        "name": "Google AI Blog",
+        "url": "https://blog.google/technology/ai/rss/",
+        "enabled": true,
+        "category": "ai-labs"
+      },
+      {
+        "name": "Hugging Face Blog",
+        "url": "https://huggingface.co/blog/feed.xml",
+        "enabled": true,
+        "category": "ai-labs"
+      },
+      {
+        "name": "Simon Willison",
+        "url": "https://simonwillison.net/atom/everything/",
+        "enabled": true,
+        "category": "ai-news"
+      },
+      {
+        "name": "Latent Space",
+        "url": "https://www.latent.space/feed",
+        "enabled": true,
+        "category": "ai-news"
+      },
+      {
+        "name": "TechCrunch AI",
+        "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+        "enabled": true,
+        "category": "ai-news"
+      },
+      {
+        "name": "LangChain Blog",
+        "url": "https://blog.langchain.dev/rss/",
+        "enabled": true,
+        "category": "evals-observability"
+      },
+      {
+        "name": "Arize AI Blog",
+        "url": "https://arize.com/blog/feed/",
+        "enabled": true,
+        "category": "evals-observability"
+      },
+      {
+        "name": "SemiAnalysis",
+        "url": "https://semianalysis.com/feed/",
+        "enabled": true,
+        "category": "gpu-hardware"
+      },
+      {
+        "name": "NVIDIA Blog",
+        "url": "https://blogs.nvidia.com/feed/",
+        "enabled": true,
+        "category": "gpu-hardware"
+      },
+      {
+        "name": "The Register AI/ML",
+        "url": "https://www.theregister.com/software/ai_ml/headlines.atom",
+        "enabled": true,
+        "category": "gpu-hardware"
+      },
+      {
+        "name": "arXiv cs.AI",
+        "url": "https://rss.arxiv.org/rss/cs.AI",
+        "enabled": true,
+        "category": "research"
+      },
+      {
+        "name": "YouTube: Two Minute Papers",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg",
+        "enabled": true,
+        "category": "videos"
+      },
+      {
+        "name": "YouTube: AI Explained",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCNJ1Ymd5yFuUPtn21xtRbbw",
+        "enabled": true,
+        "category": "videos"
+      },
+      {
+        "name": "YouTube: Yannic Kilcher",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCZHmQk67mSJgfCCTn7xBfew",
+        "enabled": true,
+        "category": "videos"
+      }
+    ],
+    "reddit": {
+      "enabled": true,
+      "subreddits": [
+        {
+          "subreddit": "MachineLearning",
+          "enabled": true,
+          "sort": "hot",
+          "time_filter": "day",
+          "fetch_limit": 15,
+          "min_score": 100
+        },
+        {
+          "subreddit": "LocalLLaMA",
+          "enabled": true,
+          "sort": "hot",
+          "time_filter": "day",
+          "fetch_limit": 15,
+          "min_score": 200
+        }
+      ],
+      "users": [],
+      "fetch_comments": 5
+    },
+    "twitter": {
+      "enabled": false,
+      "users": ["karpathy", "ylecun"],
+      "fetch_limit": 10
+    },
+    "google_news": {
+      "enabled": true,
+      "query": "artificial intelligence OR LLM OR GPU",
+      "language": "en",
+      "country": "US",
+      "max_results": 50,
+      "category": "ai-news"
+    }
+  },
+  "filtering": {
+    "ai_score_threshold": 6.5,
+    "time_window_hours": 24,
+    "max_items": 30,
+    "category_groups": {
+      "evals": {
+        "name": "Evals & Observability",
+        "limit": 6,
+        "categories": ["evals-observability"]
+      },
+      "labs": {
+        "name": "Labs & Models",
+        "limit": 6,
+        "categories": ["ai-labs"]
+      },
+      "hardware": {
+        "name": "GPU & Infra",
+        "limit": 5,
+        "categories": ["gpu-hardware"]
+      },
+      "research": {
+        "name": "Research",
+        "limit": 5,
+        "categories": ["research"]
+      },
+      "videos": {
+        "name": "Videos",
+        "limit": 5,
+        "categories": ["videos"]
+      },
+      "news": {
+        "name": "AI News & Trends",
+        "limit": 6,
+        "categories": ["ai-news", "news"]
+      }
+    },
+    "default_group": "other",
+    "default_group_limit": 6
+  },
+  "webhook": {
+    "enabled": true,
+    "url_env": "HORIZON_WEBHOOK_URL",
+    "delivery": "summary",
+    "overview_position": "first",
+    "platform": "slack",
+    "layout": "markdown",
+    "fallback_layout": "markdown",
+    "languages": ["en"],
+    "request_body": {
+      "text": ":robot_face: *DailyAIdose — #{date}*  (#{important_items}/#{all_items} stories made the cut)\n\n#{summary?limit=16000&split=---}"
+    },
+    "headers": ""
+  }
+}
