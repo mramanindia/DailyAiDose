@@ -41,7 +41,6 @@ jobs:
         run: uv run horizon --hours 24
 
       - name: Post digest to ClickUp chat
-        if: ${{ secrets.CLICKUP_API_TOKEN != '' }}
         env:
           CLICKUP_API_TOKEN: ${{ secrets.CLICKUP_API_TOKEN }}
           CLICKUP_WORKSPACE_ID: ${{ secrets.CLICKUP_WORKSPACE_ID }}
