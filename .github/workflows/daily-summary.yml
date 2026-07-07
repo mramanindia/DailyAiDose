@@ -40,6 +40,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run horizon --hours 24
 
+      - name: Post digest to ClickUp chat
+        if: ${{ secrets.CLICKUP_API_TOKEN != '' }}
+        env:
+          CLICKUP_API_TOKEN: ${{ secrets.CLICKUP_API_TOKEN }}
+          CLICKUP_WORKSPACE_ID: ${{ secrets.CLICKUP_WORKSPACE_ID }}
+          CLICKUP_CHANNEL_ID: ${{ secrets.CLICKUP_CHANNEL_ID }}
+        run: uv run python scripts/post_clickup_chat.py
+
       - name: Set current date as environment variable
         run: echo "DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 

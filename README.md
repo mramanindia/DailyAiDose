@@ -19,6 +19,13 @@ Built on [Horizon](https://github.com/Thysrael/Horizon) (MIT), with a Slack mrkd
 2. Add two repository secrets (Settings → Secrets and variables → Actions):
    - `ANTHROPIC_API_KEY` — used to score and summarize items (default model: `claude-sonnet-5`)
    - `HORIZON_WEBHOOK_URL` — the Slack webhook URL
+
+   Optionally, to also post the digest into a ClickUp chat channel, add:
+   - `CLICKUP_API_TOKEN` — personal API token (ClickUp Settings → Apps → API Token)
+   - `CLICKUP_WORKSPACE_ID` — numeric workspace id
+   - `CLICKUP_CHANNEL_ID` — chat channel id
+
+   The ClickUp step ([`scripts/post_clickup_chat.py`](scripts/post_clickup_chat.py)) is skipped automatically when `CLICKUP_API_TOKEN` is not set.
 3. Done. The workflow in [`.github/workflows/daily-summary.yml`](.github/workflows/daily-summary.yml) runs daily; trigger it manually from the Actions tab with **Run workflow** to test.
 
 ### Changing things
