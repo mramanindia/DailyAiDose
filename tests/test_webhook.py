@@ -1262,12 +1262,12 @@ class TestURLValidation:
             WebhookNotifier(config)
         del os.environ[_TEST_URL_ENV]
 
-    def test_empty_env_var_value_raises_value_error(self):
-        """Env var exists but is empty string → ValueError."""
+    def test_empty_env_var_value_skips(self):
+        """Env var exists but is empty string → url=None skip (CI maps unset secrets to '')."""
         os.environ[_TEST_URL_ENV] = ""
         config = WebhookConfig(enabled=True, url_env=_TEST_URL_ENV)
-        with pytest.raises(ValueError, match="empty"):
-            WebhookNotifier(config)
+        notifier = WebhookNotifier(config)
+        assert notifier.url is None
         del os.environ[_TEST_URL_ENV]
 
     def test_env_var_not_set_sets_url_none(self):

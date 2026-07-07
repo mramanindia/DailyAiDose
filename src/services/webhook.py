@@ -308,8 +308,9 @@ class WebhookNotifier:
             return
 
         raw_url = os.getenv(self.config.url_env)
-        if raw_url is None:
-            # env var name configured, but the env var itself doesn't exist
+        if not raw_url:
+            # env var name configured, but the env var is absent or empty
+            # (CI maps unset secrets to empty strings — treat both as skip)
             logger.warning(
                 "Webhook enabled but env var '%s' is not set, skipping notification.",
                 self.config.url_env,
