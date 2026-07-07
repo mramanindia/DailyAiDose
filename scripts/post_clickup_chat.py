@@ -38,8 +38,11 @@ def main() -> int:
     workspace_id = os.environ.get("CLICKUP_WORKSPACE_ID")
     channel_id = os.environ.get("CLICKUP_CHANNEL_ID")
     if not all([token, workspace_id, channel_id]):
-        print("Missing CLICKUP_API_TOKEN, CLICKUP_WORKSPACE_ID, or CLICKUP_CHANNEL_ID")
-        return 1
+        print(
+            "ClickUp delivery not fully configured "
+            "(need CLICKUP_API_TOKEN, CLICKUP_WORKSPACE_ID, CLICKUP_CHANNEL_ID) — skipping."
+        )
+        return 0
 
     summary_path = latest_summary(Path("data/summaries"))
     if summary_path is None:
