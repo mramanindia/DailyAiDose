@@ -9,7 +9,8 @@
     "throttle_sec": 0,
     "languages": ["en"],
     "analysis_concurrency": 3,
-    "enrichment_concurrency": 2
+    "enrichment_concurrency": 2,
+    "compact_digest": true
   },
   "sources": {
     "github": [
@@ -169,41 +170,42 @@
   "filtering": {
     "ai_score_threshold": 6.5,
     "time_window_hours": 24,
-    "max_items": 30,
+    "max_items": 5,
+    "skip_seen_days": 14,
     "category_groups": {
       "evals": {
         "name": "Evals & Observability",
-        "limit": 6,
+        "limit": 2,
         "categories": ["evals-observability"]
       },
       "labs": {
         "name": "Labs & Models",
-        "limit": 6,
+        "limit": 2,
         "categories": ["ai-labs"]
       },
       "hardware": {
         "name": "GPU & Infra",
-        "limit": 5,
+        "limit": 2,
         "categories": ["gpu-hardware"]
       },
       "research": {
         "name": "Research",
-        "limit": 5,
+        "limit": 2,
         "categories": ["research"]
       },
       "videos": {
         "name": "Videos",
-        "limit": 5,
+        "limit": 2,
         "categories": ["videos"]
       },
       "news": {
         "name": "AI News & Trends",
-        "limit": 6,
+        "limit": 2,
         "categories": ["ai-news", "news"]
       }
     },
     "default_group": "other",
-    "default_group_limit": 6
+    "default_group_limit": 2
   },
   "webhook": {
     "enabled": true,

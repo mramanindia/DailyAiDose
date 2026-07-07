@@ -101,6 +101,27 @@ class HorizonOrchestrator:
                     f"→ {len(merged_items)} unique items\n"
                 )
 
+            # 3.6 Skip items already fetched by a previous run (cross-day dedup)
+            seen_items: Dict[str, str] = {}
+            skip_seen_days = self.config.filtering.skip_seen_days
+            if skip_seen_days > 0:
+                cutoff = (
+                    datetime.now(timezone.utc) - timedelta(days=skip_seen_days)
+                ).strftime("%Y-%m-%d")
+                seen_items = {
+                    item_id: day
+                    for item_id, day in self.storage.load_seen_items().items()
+                    if day >= cutoff
+                }
+                fresh_items = [i for i in merged_items if i.id not in seen_items]
+                if len(fresh_items) < len(merged_items):
+                    self.console.print(
+                        f"🙈 Skipped {len(merged_items) - len(fresh_items)} items "
+                        f"already covered in the last {skip_seen_days} days "
+                        f"→ {len(fresh_items)} new items\n"
+                    )
+                merged_items = fresh_items
+
             # 4. Analyze with AI
             analyzed_items = await self._analyze_content(merged_items)
             self.console.print(f"🤖 Analyzed {len(analyzed_items)} items with AI\n")
@@ -143,13 +164,22 @@ class HorizonOrchestrator:
             self.console.print("")
 
             # 6. Search related stories + enrich with background knowledge (2nd AI pass)
-            await self._enrich_important_items(important_items)
+            if self.config.ai.compact_digest:
+                self.console.print("📎 Compact digest enabled — skipping enrichment pass\n")
+            else:
+                await self._enrich_important_items(important_items)
 
             # 7. Generate and save daily summaries for each configured language
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             for lang in self.config.ai.languages:
                 summarizer = DailySummarizer()
-                summary = await summarizer.generate_summary(important_items, today, len(all_items), language=lang)
+                summary = await summarizer.generate_summary(
+                    important_items,
+                    today,
+                    len(all_items),
+                    language=lang,
+                    compact=self.config.ai.compact_digest,
+                )
 
                 # Save to data/summaries/
                 summary_path = self.storage.save_daily_summary(today, summary, language=lang)
@@ -207,6 +237,15 @@ class HorizonOrchestrator:
                         lang=lang,
                         summarizer=summarizer,
                     )
+
+            # 8. Record everything fetched this run so future runs skip it
+            if skip_seen_days > 0:
+                for item in merged_items:
+                    seen_items[item.id] = today
+                seen_path = self.storage.save_seen_items(seen_items)
+                self.console.print(
+                    f"📒 Recorded {len(merged_items)} items as seen → {seen_path}\n"
+                )
 
             self.console.print("[bold green]✅ Horizon completed successfully![/bold green]")
             usage = get_usage_snapshot()

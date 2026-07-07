@@ -109,6 +109,9 @@ class AIConfig(BaseModel):
     throttle_sec: float = 0.0
     analysis_concurrency: int = 1
     enrichment_concurrency: int = 1
+    # Compact digest: skip the enrichment pass and render each item as just
+    # a linked heading, the one-sentence summary, and the source line.
+    compact_digest: bool = False
     languages: List[str] = Field(default_factory=lambda: ["en"])
     # Azure OpenAI specific; required when provider == AZURE
     azure_endpoint_env: Optional[str] = None
@@ -419,6 +422,9 @@ class FilteringConfig(BaseModel):
     category_groups: Dict[str, CategoryGroupConfig] = Field(default_factory=dict)
     default_group: str = "other"
     default_group_limit: Optional[int] = Field(default=None, gt=0)
+    # Skip items already fetched in a previous run within the last N days
+    # (0 disables). Requires persisting data/seen.json between runs.
+    skip_seen_days: int = Field(default=0, ge=0)
 
 
 class Config(BaseModel):

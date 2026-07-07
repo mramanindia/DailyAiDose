@@ -38,8 +38,8 @@ ENV/
 .env
 
 # Data files (keep structure, ignore content)
+# data/seen.json is committed: it carries cross-day dedup state between CI runs
 data/config.json
-data/seen.json
 data/summaries/*.md
 data/subscribers.json
 data/mcp.secrets.json

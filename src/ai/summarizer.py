@@ -19,7 +19,7 @@ def _pangu(text: str) -> str:
 
 LABELS = {
     "en": {
-        "header": "Horizon Daily",
+        "header": "DailyAIdose",
         "source": "Source",
         "background": "Background",
         "discussion": "Discussion",
@@ -73,6 +73,7 @@ class DailySummarizer:
         date: str,
         total_fetched: int,
         language: str = "en",
+        compact: bool = False,
     ) -> str:
         """Generate daily summary in Markdown format.
 
@@ -83,6 +84,8 @@ class DailySummarizer:
             date: Date string (YYYY-MM-DD)
             total_fetched: Total number of items fetched before filtering
             language: Output language, either "en" or "zh"
+            compact: Render each item as heading + summary + source only,
+                and skip the table of contents
 
         Returns:
             str: Markdown formatted summary
@@ -98,18 +101,23 @@ class DailySummarizer:
             "---\n\n"
         )
 
-        # TOC
-        toc_entries = []
-        for i, item in enumerate(items):
-            _t = item.metadata.get(f"title_{language}") or item.title
-            t = str(_t).replace("[", "(").replace("]", ")")
-            if language == "zh":
-                t = _pangu(t)
-            score = item.ai_score or "?"
-            toc_entries.append(f"{i + 1}. [{t}](#item-{i + 1}) \u2b50\ufe0f {score}/10")
-        toc = "\n".join(toc_entries) + "\n\n---\n\n"
+        # TOC (redundant for a short compact digest)
+        toc = ""
+        if not compact:
+            toc_entries = []
+            for i, item in enumerate(items):
+                _t = item.metadata.get(f"title_{language}") or item.title
+                t = str(_t).replace("[", "(").replace("]", ")")
+                if language == "zh":
+                    t = _pangu(t)
+                score = item.ai_score or "?"
+                toc_entries.append(f"{i + 1}. [{t}](#item-{i + 1}) \u2b50\ufe0f {score}/10")
+            toc = "\n".join(toc_entries) + "\n\n---\n\n"
 
-        parts = [self._format_item(item, labels, language, i + 1) for i, item in enumerate(items)]
+        parts = [
+            self._format_item(item, labels, language, i + 1, compact=compact)
+            for i, item in enumerate(items)
+        ]
 
         return header + toc + "".join(parts)
 
@@ -160,7 +168,14 @@ class DailySummarizer:
         prefix = f"第 {index}/{total} 条\n\n" if language == "zh" else f"Item {index}/{total}\n\n"
         return prefix + self._format_item(item, labels, language, index).rstrip("-\n ")
 
-    def _format_item(self, item: ContentItem, labels: dict, language: str, index: int) -> str:
+    def _format_item(
+        self,
+        item: ContentItem,
+        labels: dict,
+        language: str,
+        index: int,
+        compact: bool = False,
+    ) -> str:
         """Format a single ContentItem into Markdown."""
         _title = item.metadata.get(f"title_{language}") or item.title
         title = str(_title).replace("[", "(").replace("]", ")")
@@ -212,6 +227,22 @@ class DailySummarizer:
             discussion_url = str(discussion_url)
             if discussion_url != url:
                 source_line += f' · [{labels["discussion"]}]({discussion_url})'
+
+        if compact:
+            # Compact: prefer the short one-line analysis summary over the
+            # long enriched paragraph.
+            short_summary = item.ai_summary or summary
+            return "\n".join(
+                [
+                    f"## [{title}]({url}) ⭐️ {score}/10",
+                    "",
+                    short_summary,
+                    "",
+                    source_line,
+                    "",
+                    "---",
+                ]
+            ) + "\n\n"
 
         lines = [
             f'<a id="item-{index}"></a>',

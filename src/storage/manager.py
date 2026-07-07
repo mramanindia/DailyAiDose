@@ -108,6 +108,25 @@ class StorageManager:
 
         return self.config_path
 
+    def load_seen_items(self) -> dict:
+        """Load the {item_id: 'YYYY-MM-DD'} map of items covered by past runs."""
+        path = self.data_dir / "seen.json"
+        if not path.exists():
+            return {}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+        except (json.JSONDecodeError, OSError):
+            return {}
+
+    def save_seen_items(self, seen: dict) -> Path:
+        """Persist the seen-items map to data/seen.json."""
+        path = self.data_dir / "seen.json"
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(seen, f, ensure_ascii=False, sort_keys=True, indent=1)
+            f.write("\n")
+        return path
+
     def save_daily_summary(self, date: str, markdown: str, language: str = "en") -> Path:
         filename = f"horizon-{date}-{language}.md"
         filepath = self.summaries_dir / filename
