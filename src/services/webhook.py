@@ -117,6 +117,7 @@ def _format_markdown_for_webhook(value: str) -> str:
 
 
 _MD_LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
+_MD_ANCHOR_LINK_RE = re.compile(r"\[([^\]]+)\]\(#[^)]*\)")
 _MD_HEADER_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
 _MD_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 
@@ -126,9 +127,11 @@ def _format_markdown_for_slack(value: str) -> str:
 
     Slack incoming webhooks do not render ``[text](url)`` links, ``**bold**``,
     or ``#`` headers; links become ``<url|text>`` and both bold and headers
-    use single asterisks.
+    use single asterisks. In-page anchor links have no Slack equivalent and
+    are reduced to their plain text.
     """
     value = _MD_LINK_RE.sub(r"<\2|\1>", value)
+    value = _MD_ANCHOR_LINK_RE.sub(r"\1", value)
     value = _MD_HEADER_RE.sub(r"*\1*", value)
     value = _MD_BOLD_RE.sub(r"*\1*", value)
     return value
