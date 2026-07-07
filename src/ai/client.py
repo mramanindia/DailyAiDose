@@ -132,6 +132,9 @@ class AnthropicClient(AIClient):
         self.model = config.model
         self.temperature = config.temperature
         self.max_tokens = config.max_tokens
+        # Claude Sonnet 5 / Opus 4.7+ reject non-default sampling params with
+        # a 400. We learn this on first 400 and stop sending temperature.
+        self._supports_temperature = True
 
     async def complete(
         self,
@@ -154,13 +157,24 @@ class AnthropicClient(AIClient):
         temperature = self.temperature if temperature is None else temperature
         max_tokens = self.max_tokens if max_tokens is None else max_tokens
 
-        message = await self.client.messages.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system,
-            messages=[{"role": "user", "content": user}]
-        )
+        kwargs = {
+            "model": self.model,
+            "max_tokens": max_tokens,
+            "system": system,
+            "messages": [{"role": "user", "content": user}],
+        }
+        if self._supports_temperature and temperature is not None:
+            kwargs["temperature"] = temperature
+
+        try:
+            message = await self.client.messages.create(**kwargs)
+        except Exception as exc:
+            if "temperature" in kwargs and "temperature" in str(exc).lower():
+                self._supports_temperature = False
+                del kwargs["temperature"]
+                message = await self.client.messages.create(**kwargs)
+            else:
+                raise
         usage = getattr(message, "usage", None)
         if usage is not None:
             record_usage(
