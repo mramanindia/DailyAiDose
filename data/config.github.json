@@ -3,6 +3,7 @@
   "ai": {
     "provider": "anthropic",
     "model": "claude-sonnet-5",
+    "analysis_model": "claude-haiku-4-5",
     "api_key_env": "ANTHROPIC_API_KEY",
     "temperature": 0.3,
     "max_tokens": 8192,
@@ -109,7 +110,8 @@
         "name": "arXiv cs.AI",
         "url": "https://rss.arxiv.org/rss/cs.AI",
         "enabled": true,
-        "category": "research"
+        "category": "research",
+        "max_items": 25
       },
       {
         "name": "YouTube: Two Minute Papers",
@@ -196,6 +198,8 @@
       "videos": {
         "name": "Videos",
         "limit": 2,
+        "min_items": 1,
+        "min_score": 5.5,
         "categories": ["videos"]
       },
       "news": {
@@ -208,7 +212,7 @@
     "default_group_limit": 2
   },
   "webhook": {
-    "enabled": true,
+    "enabled": false,
     "url_env": "HORIZON_WEBHOOK_URL",
     "delivery": "summary",
     "overview_position": "first",

@@ -126,11 +126,11 @@ class HorizonOrchestrator:
             analyzed_items = await self._analyze_content(merged_items)
             self.console.print(f"🤖 Analyzed {len(analyzed_items)} items with AI\n")
 
-            # 5. Filter by score threshold
+            # 5. Filter by score threshold (per-category-group overrides apply)
             threshold = self.config.filtering.ai_score_threshold
             important_items = [
                 item for item in analyzed_items
-                if item.ai_score and item.ai_score >= threshold
+                if item.ai_score and item.ai_score >= self._score_threshold_for(item)
             ]
             important_items.sort(key=lambda x: x.ai_score or 0, reverse=True)
 
@@ -542,6 +542,25 @@ class HorizonOrchestrator:
 
         return [item for i, item in enumerate(items) if i not in drop_indices]
 
+    def _category_group_for(self, item: ContentItem) -> Optional[str]:
+        """Return the configured group key for an item's category, if any."""
+        category = item.metadata.get("category")
+        if not isinstance(category, str):
+            return None
+        for group_key, group in self.config.filtering.category_groups.items():
+            if category in group.categories:
+                return group_key
+        return None
+
+    def _score_threshold_for(self, item: ContentItem) -> float:
+        """Effective AI score threshold for an item (per-group min_score wins)."""
+        group_key = self._category_group_for(item)
+        if group_key is not None:
+            min_score = self.config.filtering.category_groups[group_key].min_score
+            if min_score is not None:
+                return min_score
+        return self.config.filtering.ai_score_threshold
+
     def apply_balanced_digest(
         self,
         items: List[ContentItem],
@@ -585,18 +604,44 @@ class HorizonOrchestrator:
                     f"groups; using '{first_group}'.[/yellow]"
                 )
 
-        selected: List[tuple[ContentItem, str]] = []
-        group_counts: Dict[str, int] = defaultdict(int)
         default_group = filtering.default_group
 
-        for item in sorted_items:
+        def group_key_for(item: ContentItem) -> str:
             category = item.metadata.get("category")
-            group_key = (
+            return (
                 category_to_group.get(category, default_group)
                 if isinstance(category, str)
                 else default_group
             )
 
+        # Pass 1: reserve slots for groups with min_items so they are not
+        # crowded out by higher-scoring groups before the max_items cap.
+        selected: List[tuple[ContentItem, str]] = []
+        group_counts: Dict[str, int] = defaultdict(int)
+        reserved_ids: set[int] = set()
+        for group_key, group in groups.items():
+            take = min(group.min_items, group.limit)
+            if take <= 0:
+                continue
+            for item in sorted_items:
+                if group_counts[group_key] >= take:
+                    break
+                if max_items is not None and len(selected) >= max_items:
+                    break
+                if group_key_for(item) != group_key:
+                    continue
+                selected.append((item, group_key))
+                group_counts[group_key] += 1
+                reserved_ids.add(id(item))
+
+        # Pass 2: fill remaining slots by score, respecting group limits.
+        for item in sorted_items:
+            if id(item) in reserved_ids:
+                continue
+            if max_items is not None and len(selected) >= max_items:
+                break
+
+            group_key = group_key_for(item)
             if group_key in groups:
                 limit = groups[group_key].limit
             else:
@@ -608,8 +653,7 @@ class HorizonOrchestrator:
             selected.append((item, group_key))
             group_counts[group_key] += 1
 
-        if max_items is not None:
-            selected = selected[:max_items]
+        selected.sort(key=lambda pair: pair[0].ai_score or 0, reverse=True)
 
         final_counts: Dict[str, int] = defaultdict(int)
         for _, group_key in selected:
@@ -736,7 +780,14 @@ class HorizonOrchestrator:
         """
         self.console.print("🤖 Analyzing content with AI...")
 
-        ai_client = create_ai_client(self.config.ai)
+        ai_config = self.config.ai
+        if ai_config.analysis_model:
+            self.console.print(
+                f"   Using {ai_config.analysis_model} for per-item scoring"
+            )
+            ai_config = ai_config.model_copy(update={"model": ai_config.analysis_model})
+
+        ai_client = create_ai_client(ai_config)
         analyzer = ContentAnalyzer(ai_client)
 
         return await analyzer.analyze_batch(items)

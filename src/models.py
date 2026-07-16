@@ -102,6 +102,9 @@ class AIConfig(BaseModel):
     provider: AIProvider
     provider_chain: Optional[str] = None
     model: str
+    # Cheaper model for the high-volume per-item scoring pass; the main
+    # `model` is still used for dedup and the daily summary.
+    analysis_model: Optional[str] = None
     base_url: Optional[str] = None
     api_key_env: str
     temperature: float = 0.3
@@ -143,6 +146,9 @@ class RSSSourceConfig(BaseModel):
     url: HttpUrl
     enabled: bool = True
     category: Optional[str] = None
+    # Cap on items fetched per run (newest first). Guards against
+    # high-volume feeds (e.g. arXiv) flooding the AI analysis pass.
+    max_items: Optional[int] = Field(default=None, gt=0)
 
 
 class RedditSubredditConfig(BaseModel):
@@ -411,6 +417,13 @@ class CategoryGroupConfig(BaseModel):
     name: Optional[str] = None
     limit: int = Field(gt=0)
     categories: List[str] = Field(min_length=1)
+    # Reserve at least this many digest slots for the group (when enough
+    # of its items passed the score filter). Guarantees representation for
+    # groups that rarely out-score others (e.g. videos).
+    min_items: int = Field(default=0, ge=0)
+    # Per-group override of filtering.ai_score_threshold. Lets low-scoring
+    # but desirable categories (e.g. videos) into the candidate pool.
+    min_score: Optional[float] = None
 
 
 class FilteringConfig(BaseModel):

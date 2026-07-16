@@ -122,6 +122,64 @@ def test_duplicate_category_warns_and_first_group_wins() -> None:
     assert "using 'first'" in orchestrator.console.export_text()
 
 
+def test_min_items_reserves_slot_for_low_scoring_group() -> None:
+    filtering = FilteringConfig(
+        max_items=3,
+        category_groups={
+            "news": CategoryGroupConfig(limit=3, categories=["news"]),
+            "videos": CategoryGroupConfig(
+                limit=2, min_items=1, categories=["videos"]
+            ),
+        },
+    )
+    items = [
+        make_item("news-1", 9.0, "news"),
+        make_item("news-2", 8.5, "news"),
+        make_item("news-3", 8.0, "news"),
+        make_item("video", 6.0, "videos"),
+    ]
+
+    result = make_orchestrator(filtering).apply_balanced_digest(items)
+
+    assert [item.id for item in result.items] == ["news-1", "news-2", "video"]
+    assert result.group_counts == {"news": 2, "videos": 1}
+
+
+def test_min_items_is_noop_when_group_has_no_candidates() -> None:
+    filtering = FilteringConfig(
+        max_items=2,
+        category_groups={
+            "news": CategoryGroupConfig(limit=2, categories=["news"]),
+            "videos": CategoryGroupConfig(
+                limit=2, min_items=1, categories=["videos"]
+            ),
+        },
+    )
+    items = [make_item("news-1", 9.0, "news"), make_item("news-2", 8.0, "news")]
+
+    result = make_orchestrator(filtering).apply_balanced_digest(items)
+
+    assert [item.id for item in result.items] == ["news-1", "news-2"]
+
+
+def test_group_min_score_overrides_global_threshold() -> None:
+    filtering = FilteringConfig(
+        ai_score_threshold=6.5,
+        category_groups={
+            "videos": CategoryGroupConfig(
+                limit=2, min_score=5.5, categories=["videos"]
+            ),
+        },
+    )
+    orchestrator = make_orchestrator(filtering)
+
+    video = make_item("video", 5.7, "videos")
+    news = make_item("news", 5.7, "news")
+
+    assert orchestrator._score_threshold_for(video) == 5.5
+    assert orchestrator._score_threshold_for(news) == 6.5
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [

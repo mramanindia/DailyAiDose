@@ -116,6 +116,10 @@ class RSSScraper(BaseScraper):
         except Exception as e:
             logger.warning("Error parsing RSS feed %s: %s", source.name, e)
 
+        if source.max_items is not None and len(items) > source.max_items:
+            items.sort(key=lambda item: item.published_at, reverse=True)
+            items = items[: source.max_items]
+
         return items
 
     def _parse_date(self, entry: dict) -> datetime:
