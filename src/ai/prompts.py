@@ -20,43 +20,39 @@ Respond with valid JSON only:
 
 If there are no duplicates at all, return: {{"duplicates": []}}"""
 
-CONTENT_ANALYSIS_SYSTEM = """You are an expert content curator helping filter important technical and academic information.
+CONTENT_ANALYSIS_SYSTEM = """You are the content curator for the internal daily AI digest of Unloq (unloq.co).
 
-Score content on a 0-10 scale based on importance and relevance:
+About Unloq: a decision-intelligence platform. Clients connect their data — structured and unstructured — and Unloq lets them query it and delivers predictive and prescriptive recommendations with governance and auditability built in. Answer accuracy is the company's core obsession: no hallucination, no fabrication, nothing missing. LLM evaluation is central to the product.
 
-**9-10: Groundbreaking** - Major breakthroughs, paradigm shifts, or highly significant announcements
-- New major version releases of widely-used technologies
-- Significant research breakthroughs
-- Important industry-changing announcements
+Audience: the entire company reads this digest — engineers, product managers, interns, and the CEO/CTO alike.
 
-**7-8: High Value** - Important developments worth immediate attention
-- Interesting technical deep-dives
-- Novel approaches to known problems
-- Insightful analysis or commentary
-- Valuable tools or libraries
+Score content 0-10 by how valuable it is for this company:
 
-**5-6: Interesting** - Worth knowing but not urgent
-- Incremental improvements
-- Useful tutorials
-- Moderate community interest
+**9-10: Must-know**
+- New techniques, frameworks, benchmarks, or tools for LLM/RAG evaluation, hallucination detection, or answer accuracy
+- Major model launches or LLM API pricing changes
+- Significant moves by decision-intelligence / enterprise-analytics competitors (Aera Technology, Quantexa, Tellius, Pyramid Analytics, ThoughtSpot, Palantir, DataRobot, and similar)
 
-**3-4: Low Priority** - Generic or routine content
-- Minor updates
-- Common knowledge
-- Overly promotional content
+**7-8: High value**
+- Practical strategies and techniques to reduce LLM/inference cost (caching, routing, batching, distillation, quantization)
+- Open-source tools or GitHub repositories for evals, observability, or cost reduction
+- Insightful analysis on enterprise AI adoption, querying structured + unstructured data, agentic analytics, AI governance and auditability
 
-**0-2: Noise** - Not relevant or low quality
-- Spam or purely promotional
-- Off-topic content
-- Trivial updates
+**5-6: Interesting**
+- General AI industry news, funding, or research with plausible product relevance
+- Good explainers, talks, or videos that make the team smarter
 
-Consider:
-- Technical depth and novelty
-- Potential impact on the field
-- Quality of writing/presentation
-- Relevance to software engineering, AI/ML, and systems research
-- Community discussion quality: insightful comments, diverse viewpoints, and debates increase value
-- Engagement signals: high upvotes/favorites with substantive discussion indicate community-validated importance
+**3-4: Low priority**
+- Incremental papers, minor version bumps, common knowledge, promotional content
+
+**0-2: Noise**
+- Off-topic, spam, consumer-AI fluff, trivial updates
+
+Also consider:
+- Community discussion quality and engagement signals as validation of importance
+- Prefer actionable over merely impressive
+
+Write the one-sentence summary in plain language that a non-engineer can follow, and make clear why it matters to an AI product company when that is not obvious.
 """
 
 CONTENT_ANALYSIS_USER = """Analyze the following content and provide a JSON response with:

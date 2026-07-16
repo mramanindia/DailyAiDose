@@ -26,6 +26,18 @@
         "owner": "vllm-project",
         "repo": "vllm",
         "enabled": true
+      },
+      {
+        "type": "repo_releases",
+        "owner": "BerriAI",
+        "repo": "litellm",
+        "enabled": true
+      },
+      {
+        "type": "repo_releases",
+        "owner": "Helicone",
+        "repo": "helicone",
+        "enabled": true
       }
     ],
     "hackernews": {
@@ -130,6 +142,64 @@
         "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCZHmQk67mSJgfCCTn7xBfew",
         "enabled": true,
         "category": "videos"
+      },
+      {
+        "name": "Interconnects (Nathan Lambert)",
+        "url": "https://www.interconnects.ai/feed",
+        "enabled": true,
+        "category": "newsletters"
+      },
+      {
+        "name": "Ahead of AI (Sebastian Raschka)",
+        "url": "https://magazine.sebastianraschka.com/feed",
+        "enabled": true,
+        "category": "newsletters"
+      },
+      {
+        "name": "Import AI (Jack Clark)",
+        "url": "https://importai.substack.com/feed",
+        "enabled": true,
+        "category": "newsletters"
+      },
+      {
+        "name": "TLDR AI",
+        "url": "https://tldr.tech/api/rss/ai",
+        "enabled": true,
+        "category": "newsletters"
+      },
+      {
+        "name": "Ben's Bites",
+        "url": "https://www.bensbites.com/feed",
+        "enabled": true,
+        "category": "newsletters"
+      },
+      {
+        "name": "MarkTechPost",
+        "url": "https://www.marktechpost.com/feed/",
+        "enabled": true,
+        "category": "ai-news",
+        "max_items": 10
+      },
+      {
+        "name": "GNews: LLM Evals & Hallucination",
+        "url": "https://news.google.com/rss/search?q=%22LLM+evaluation%22+OR+%22hallucination+detection%22+OR+%22AI+evals%22+OR+%22LLM+observability%22&hl=en-US&gl=US&ceid=US:en",
+        "enabled": true,
+        "category": "evals-observability",
+        "max_items": 20
+      },
+      {
+        "name": "GNews: Decision Intelligence Competitors",
+        "url": "https://news.google.com/rss/search?q=%22Aera+Technology%22+OR+Quantexa+OR+Tellius+OR+%22Pyramid+Analytics%22+OR+%22ThoughtSpot%22+OR+%22DataRobot%22+OR+%22decision+intelligence+platform%22&hl=en-US&gl=US&ceid=US:en",
+        "enabled": true,
+        "category": "competitors",
+        "max_items": 20
+      },
+      {
+        "name": "GNews: LLM API Pricing & Cost",
+        "url": "https://news.google.com/rss/search?q=%22LLM+pricing%22+OR+%22LLM+cost%22+OR+%22inference+cost%22+OR+%22API+pricing%22+AI&hl=en-US&gl=US&ceid=US:en",
+        "enabled": true,
+        "category": "llm-costs",
+        "max_items": 20
       }
     ],
     "reddit": {
@@ -150,6 +220,22 @@
           "time_filter": "day",
           "fetch_limit": 15,
           "min_score": 200
+        },
+        {
+          "subreddit": "LLMDevs",
+          "enabled": true,
+          "sort": "hot",
+          "time_filter": "day",
+          "fetch_limit": 15,
+          "min_score": 40
+        },
+        {
+          "subreddit": "mlops",
+          "enabled": true,
+          "sort": "hot",
+          "time_filter": "day",
+          "fetch_limit": 10,
+          "min_score": 15
         }
       ],
       "users": [],
@@ -172,32 +258,51 @@
   "filtering": {
     "ai_score_threshold": 6.5,
     "time_window_hours": 24,
-    "max_items": 5,
+    "max_items": 8,
     "skip_seen_days": 14,
     "category_groups": {
       "evals": {
         "name": "Evals & Observability",
         "limit": 2,
+        "min_items": 1,
         "categories": ["evals-observability"]
+      },
+      "competitors": {
+        "name": "Competitor Watch",
+        "limit": 2,
+        "min_items": 1,
+        "min_score": 6.0,
+        "categories": ["competitors"]
+      },
+      "llm-costs": {
+        "name": "LLM Costs & Optimization",
+        "limit": 2,
+        "min_items": 1,
+        "categories": ["llm-costs"]
       },
       "labs": {
         "name": "Labs & Models",
         "limit": 2,
         "categories": ["ai-labs"]
       },
+      "newsletters": {
+        "name": "Newsletters",
+        "limit": 1,
+        "categories": ["newsletters"]
+      },
       "hardware": {
         "name": "GPU & Infra",
-        "limit": 2,
+        "limit": 1,
         "categories": ["gpu-hardware"]
       },
       "research": {
         "name": "Research",
-        "limit": 2,
+        "limit": 1,
         "categories": ["research"]
       },
       "videos": {
         "name": "Videos",
-        "limit": 2,
+        "limit": 1,
         "min_items": 1,
         "min_score": 5.5,
         "categories": ["videos"]
