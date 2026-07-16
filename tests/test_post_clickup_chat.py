@@ -35,9 +35,9 @@ hackernews · someone · Jul 15, 15:47
 
 
 def test_no_repeated_header_and_bold_titles() -> None:
-    msg = format_chat_message(DIGEST, "2026-07-16")
+    msg = format_chat_message(DIGEST, "16 July 2026")
 
-    assert msg.startswith("🤖 **DailyAiDose — 2026-07-16**")
+    assert msg.startswith("🌅 **DailyAiDose for Unloq — 16 July 2026**")
     # Old H1 header must not survive
     assert "# DailyAIdose" not in msg
     # H2 item headings become bold links
@@ -51,7 +51,9 @@ def test_stats_sources_and_footer_are_small() -> None:
     assert "*2 picks from 134 items*" in msg
     assert "*rss · GNews: LLM Evals & Hallucination · Jul 15, 16:48*" in msg
     assert "*hackernews · someone · Jul 15, 15:47*" in msg
-    assert msg.endswith("*This is an automated message from Agent DailyAiDose*")
+    assert msg.endswith(
+        "*This is an automated message from Agent DailyAiDose managed by Aman*"
+    )
     # Horizontal rules are dropped
     assert "---" not in msg
 

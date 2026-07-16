@@ -22,8 +22,9 @@ import httpx
 # message stays readable in the chat pane.
 MAX_CHARS = 30000
 
-BOT_NAME = "DailyAiDose"
-FOOTER = "*This is an automated message from Agent DailyAiDose*"
+HEADER_LOGO = "🌅"
+HEADER_TITLE = "DailyAiDose for Unloq"
+FOOTER = "*This is an automated message from Agent DailyAiDose managed by Aman*"
 
 # Source lines rendered by the compact digest start with the source type.
 _SOURCE_LINE_RE = re.compile(
@@ -55,7 +56,7 @@ def format_chat_message(digest_md: str, date: str) -> str:
     - horizontal rules dropped; spacing separates items
     - small automated-message footer at the bottom
     """
-    lines_out: list[str] = [f"🤖 **{BOT_NAME} — {date}**"]
+    lines_out: list[str] = [f"{HEADER_LOGO} **{HEADER_TITLE} — {date}**"]
 
     for raw_line in digest_md.splitlines():
         line = raw_line.rstrip()
@@ -120,7 +121,8 @@ def main() -> int:
         print("No summary file found in data/summaries/")
         return 1
 
-    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now = datetime.now(timezone.utc)
+    date = f"{now.day} {now.strftime('%B %Y')}"  # e.g. "22 July 2026"
     digest_md = summary_path.read_text(encoding="utf-8")
     content = truncate_markdown(format_chat_message(digest_md, date), MAX_CHARS)
 
