@@ -28,11 +28,28 @@ FOOTER = "*This is an automated message from Agent DailyAiDose managed by Aman*"
 
 # Source lines rendered by the compact digest start with the source type.
 _SOURCE_LINE_RE = re.compile(
-    r"^(rss|hackernews|reddit|github|twitter|telegram|gdelt|google_news|"
-    r"openbb|ossinsight)\b.*"
+    r"^(?P<type>rss|hackernews|reddit|github|twitter|telegram|gdelt|"
+    r"google_news|openbb|ossinsight)(?P<rest>( · .*)?)$"
 )
-_ITEM_HEADING_RE = re.compile(r"^##\s+(?P<rest>\[.*)$")
+_ITEM_HEADING_RE = re.compile(
+    r"^##\s+\[(?P<title>.+?)\]\((?P<url>\S+?)\)(\s+⭐️?\s*(?P<score>[\d.?]+)/10)?\s*$"
+)
 _STATS_RE = re.compile(r"^>\s*From (?P<total>\d+) items?, (?P<selected>\d+)\b.*")
+
+# Friendly names for source types shown in the small info line. "rss" is
+# dropped entirely — the feed name that follows it is enough.
+_SOURCE_TYPE_LABELS = {
+    "rss": None,
+    "hackernews": "Hacker News",
+    "reddit": None,  # the r/subreddit token that follows is enough
+    "github": "GitHub",
+    "google_news": "Google News",
+    "twitter": "X",
+    "telegram": "Telegram",
+    "gdelt": "GDELT",
+    "openbb": "OpenBB",
+    "ossinsight": "OSS Insight",
+}
 
 
 def latest_summary(summaries_dir: Path) -> Path | None:
@@ -47,16 +64,42 @@ def truncate_markdown(text: str, limit: int) -> str:
     return text[: cut if cut > 0 else limit] + "\n\n_…truncated_"
 
 
-def format_chat_message(digest_md: str, date: str) -> str:
-    """Convert the digest markdown into a compact chat message.
+def _pretty_source(line: str) -> str:
+    """Condense a digest source line for the small info row.
 
-    - single bold header line (no repeated H1)
-    - item titles become bold links instead of H2 headings
-    - source lines become small (italic) text
-    - horizontal rules dropped; spacing separates items
-    - small automated-message footer at the bottom
+    "rss · Simon Willison · Jul 15, 23:59"  ->  "Simon Willison · Jul 15, 23:59"
+    "hackernews · someone · Jul 15, 18:12"  ->  "Hacker News · Jul 15, 18:12"
     """
-    lines_out: list[str] = [f"{HEADER_LOGO} **{HEADER_TITLE} — {date}**"]
+    tokens = line.split(" · ")
+    source_type = tokens[0]
+    rest = tokens[1:]
+    label = _SOURCE_TYPE_LABELS.get(source_type, source_type)
+    if label == "Hacker News" and len(rest) >= 2:
+        rest = rest[1:]  # drop the submitter username, keep date + discussion
+    if label:
+        rest = [label] + rest
+    return " · ".join(rest) if rest else line
+
+
+def format_chat_message(digest_md: str, date: str) -> str:
+    """Convert the digest markdown into a simple, readable chat message.
+
+    🌅 **DailyAiDose for Unloq — 17 July 2026**
+    *5 picks from 323 items*
+
+    **1. Title of the story** ⭐ 8.0
+    One-sentence plain-language summary.
+    🔗 [Read more](url) · *Source · date*
+
+    ...
+
+    *footer*
+    """
+    header = f"{HEADER_LOGO} **{HEADER_TITLE} — {date}**"
+    subtitle = ""
+    intro_lines: list[str] = []
+    items: list[dict] = []
+    current: dict | None = None
 
     for raw_line in digest_md.splitlines():
         line = raw_line.rstrip()
@@ -66,43 +109,57 @@ def format_chat_message(digest_md: str, date: str) -> str:
 
         stats = _STATS_RE.match(line)
         if stats:
-            lines_out.append(
+            subtitle = (
                 f"*{stats.group('selected')} picks from "
                 f"{stats.group('total')} items*"
             )
             continue
-        if line.startswith("> "):
-            lines_out.append(f"*{line[2:]}*")
-            continue
 
         heading = _ITEM_HEADING_RE.match(line)
         if heading:
-            rest = heading.group("rest")
-            # "[title](url) ⭐️ 7.0/10" -> "**[title](url)** ⭐️ 7.0/10"
-            match = re.match(r"^(\[.*?\]\(.*?\))(.*)$", rest)
-            if match:
-                lines_out.append(f"**{match.group(1)}**{match.group(2)}")
-            else:
-                lines_out.append(f"**{rest}**")
+            current = {
+                "title": heading.group("title"),
+                "url": heading.group("url"),
+                "score": heading.group("score"),
+                "summary": [],
+                "source": "",
+            }
+            items.append(current)
             continue
 
-        if _SOURCE_LINE_RE.match(line):
-            lines_out.append(f"*{line}*")
+        if not line:
             continue
 
-        lines_out.append(line)
-
-    # Collapse runs of blank lines and trim the edges.
-    collapsed: list[str] = []
-    for line in lines_out:
-        if line == "" and (not collapsed or collapsed[-1] == ""):
+        source = _SOURCE_LINE_RE.match(line)
+        if source and current is not None:
+            current["source"] = _pretty_source(line)
             continue
-        collapsed.append(line)
-    while collapsed and collapsed[-1] == "":
-        collapsed.pop()
 
-    body = "\n\n".join(line for line in collapsed if line != "")
-    return f"{body}\n\n{FOOTER}"
+        if current is not None:
+            current["summary"].append(line)
+        elif line.startswith("> "):
+            intro_lines.append(line[2:])
+        else:
+            intro_lines.append(line)
+
+    blocks: list[str] = [header]
+    if subtitle:
+        blocks.append(subtitle)
+    blocks.extend(intro_lines)
+
+    for i, item in enumerate(items, start=1):
+        score = f" ⭐ {item['score']}" if item["score"] else ""
+        lines = [f"**{i}. {item['title']}**{score}"]
+        if item["summary"]:
+            lines.append(" ".join(item["summary"]))
+        link_line = f"🔗 [Read more]({item['url']})"
+        if item["source"]:
+            link_line += f" · *{item['source']}*"
+        lines.append(link_line)
+        blocks.append("\n".join(lines))
+
+    blocks.append(FOOTER)
+    return "\n\n".join(blocks)
 
 
 def main() -> int:

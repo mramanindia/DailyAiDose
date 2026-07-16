@@ -34,23 +34,30 @@ hackernews · someone · Jul 15, 15:47
 """
 
 
-def test_no_repeated_header_and_bold_titles() -> None:
+def test_no_repeated_header_and_numbered_plain_titles() -> None:
     msg = format_chat_message(DIGEST, "16 July 2026")
 
     assert msg.startswith("🌅 **DailyAiDose for Unloq — 16 July 2026**")
     # Old H1 header must not survive
     assert "# DailyAIdose" not in msg
-    # H2 item headings become bold links
-    assert "**[Big Eval News](https://example.com/a)** ⭐️ 9.0/10" in msg
+    # H2 heading-links become numbered bold plain-text titles
+    assert "**1. Big Eval News** ⭐ 9.0" in msg
+    assert "**2. Cost News** ⭐ 7.0" in msg
     assert "## " not in msg
+    # The title itself is no longer a link; a small Read more link is
+    assert "[Big Eval News]" not in msg
+    assert "🔗 [Read more](https://example.com/a)" in msg
+    assert "🔗 [Read more](https://example.com/b)" in msg
 
 
 def test_stats_sources_and_footer_are_small() -> None:
-    msg = format_chat_message(DIGEST, "2026-07-16")
+    msg = format_chat_message(DIGEST, "16 July 2026")
 
     assert "*2 picks from 134 items*" in msg
-    assert "*rss · GNews: LLM Evals & Hallucination · Jul 15, 16:48*" in msg
-    assert "*hackernews · someone · Jul 15, 15:47*" in msg
+    # "rss" prefix dropped, feed name kept
+    assert "*GNews: LLM Evals & Hallucination · Jul 15, 16:48*" in msg
+    # hackernews prettified, submitter username dropped
+    assert "*Hacker News · Jul 15, 15:47*" in msg
     assert msg.endswith(
         "*This is an automated message from Agent DailyAiDose managed by Aman*"
     )
@@ -59,7 +66,7 @@ def test_stats_sources_and_footer_are_small() -> None:
 
 
 def test_summary_text_kept_as_plain_paragraph() -> None:
-    msg = format_chat_message(DIGEST, "2026-07-16")
+    msg = format_chat_message(DIGEST, "16 July 2026")
 
     assert "A new evaluation framework was released." in msg
     assert "Inference prices dropped." in msg
