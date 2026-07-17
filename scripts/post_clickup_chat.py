@@ -13,6 +13,7 @@ Required environment variables:
 import os
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -183,14 +184,27 @@ def main() -> int:
     digest_md = summary_path.read_text(encoding="utf-8")
     content = truncate_markdown(format_chat_message(digest_md, date), MAX_CHARS)
 
-    response = httpx.post(
-        f"https://api.clickup.com/api/v3/workspaces/{workspace_id}/chat/channels/{channel_id}/messages",
-        headers={"Authorization": token, "Content-Type": "application/json"},
-        json={"type": "message", "content": content, "content_format": "text/md"},
-        timeout=30,
-    )
-    print(f"ClickUp response: {response.status_code} {response.text[:300]}")
-    return 0 if response.is_success else 1
+    # ClickUp occasionally returns transient 5xx errors; retry a few times
+    # before failing the run.
+    attempts = 3
+    for attempt in range(1, attempts + 1):
+        response = httpx.post(
+            f"https://api.clickup.com/api/v3/workspaces/{workspace_id}/chat/channels/{channel_id}/messages",
+            headers={"Authorization": token, "Content-Type": "application/json"},
+            json={"type": "message", "content": content, "content_format": "text/md"},
+            timeout=30,
+        )
+        print(
+            f"ClickUp response (attempt {attempt}/{attempts}): "
+            f"{response.status_code} {response.text[:300]}"
+        )
+        if response.is_success:
+            return 0
+        if response.status_code < 500:
+            break  # client error — retrying the same payload won't help
+        if attempt < attempts:
+            time.sleep(10 * attempt)
+    return 1
 
 
 if __name__ == "__main__":
