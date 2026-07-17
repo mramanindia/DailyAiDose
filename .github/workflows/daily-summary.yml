@@ -2,13 +2,45 @@ name: DailyAIdose Digest
 
 on:
   schedule:
-    # GitHub scheduled workflows use UTC. 03:30 UTC = 09:00 IST, so the
-    # digest lands in ClickUp at 9 AM (runs may start up to ~30 min late).
-    - cron: '30 3 * * *'
+    # GitHub scheduled workflows use UTC and historically start 1-2.5h late.
+    # Dispatch early at 01:30 UTC: the job generates the digest, then holds
+    # posting until 03:30 UTC = 09:00 IST so it lands in ClickUp at 9 AM.
+    - cron: '30 1 * * *'
+    # Backup in case GitHub drops the early run entirely. The check job
+    # skips it when today's digest already completed.
+    - cron: '30 4 * * *'
   workflow_dispatch:      # Allow manual trigger
 
+# Never let two digest runs overlap (e.g. a delayed primary + the backup).
+concurrency:
+  group: dailyaidose-digest
+  cancel-in-progress: false
+
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.guard.outputs.skip }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Skip if today's digest already completed
+        id: guard
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && \
+             git log --oneline --since=midnight --grep="record seen items for $(date -u +%F)" | grep -q .; then
+            echo "Digest already completed today — skipping this run."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
   daily-summary:
+    needs: check
+    if: needs.check.outputs.skip != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Needed to publish the summary archive to gh-pages
@@ -38,6 +70,18 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run horizon --hours 24
+
+      - name: Hold until 09:00 IST (03:30 UTC) before posting
+        if: github.event_name == 'schedule'
+        run: |
+          target=$(date -u -d 'today 03:30' +%s)
+          now=$(date -u +%s)
+          if [ "$now" -lt "$target" ]; then
+            echo "Digest ready — holding $(( (target - now) / 60 )) min until 03:30 UTC."
+            sleep $(( target - now ))
+          else
+            echo "Already past 03:30 UTC — posting immediately."
+          fi
 
       - name: Post digest to ClickUp chat
         env:
