@@ -2,13 +2,15 @@ name: DailyAIdose Digest
 
 on:
   schedule:
-    # GitHub scheduled workflows use UTC and historically start 1-2.5h late.
-    # Dispatch early at 01:30 UTC: the job generates the digest, then holds
-    # posting until 03:30 UTC = 09:00 IST so it lands in ClickUp at 9 AM.
-    - cron: '30 1 * * *'
+    # GitHub scheduled workflows use UTC and start up to ~3h late (worst on
+    # :00/:30 slots, so use an odd minute). Dispatch early at 00:13 UTC: the
+    # job generates the digest, then holds posting until 03:30 UTC = 09:00 IST
+    # so it lands in ClickUp at 9 AM. Keep the cron after midnight UTC — the
+    # seen-items date stamp and the check-job guard assume same-UTC-day runs.
+    - cron: '13 0 * * *'
     # Backup in case GitHub drops the early run entirely. The check job
     # skips it when today's digest already completed.
-    - cron: '30 4 * * *'
+    - cron: '43 4 * * *'
   workflow_dispatch:      # Allow manual trigger
 
 # Never let two digest runs overlap (e.g. a delayed primary + the backup).
