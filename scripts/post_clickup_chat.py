@@ -27,6 +27,10 @@ HEADER_LOGO = "🌅"
 HEADER_TITLE = "DailyAiDose for Unloq"
 FOOTER = "*This is an automated message from Agent DailyAiDose managed by Aman*"
 
+# Markdown collapses consecutive blank lines, so use a line holding a single
+# non-breaking space to force an extra visual gap between stories.
+SPACER = "\u00a0"
+
 # Source lines rendered by the compact digest start with the source type.
 _SOURCE_LINE_RE = re.compile(
     r"^(?P<type>rss|hackernews|reddit|github|twitter|telegram|gdelt|"
@@ -143,11 +147,12 @@ def format_chat_message(digest_md: str, date: str) -> str:
         else:
             intro_lines.append(line)
 
-    blocks: list[str] = [header]
+    intro = [header]
     if subtitle:
-        blocks.append(subtitle)
-    blocks.extend(intro_lines)
+        intro.append(subtitle)
+    intro.extend(intro_lines)
 
+    sections: list[str] = ["\n\n".join(intro)]
     for i, item in enumerate(items, start=1):
         score = f" ⭐ {item['score']}" if item["score"] else ""
         lines = [f"**{i}. {item['title']}**{score}"]
@@ -157,10 +162,10 @@ def format_chat_message(digest_md: str, date: str) -> str:
         if item["source"]:
             link_line += f" · *{item['source']}*"
         lines.append(link_line)
-        blocks.append("\n".join(lines))
+        sections.append("\n".join(lines))
 
-    blocks.append(FOOTER)
-    return "\n\n".join(blocks)
+    sections.append(FOOTER)
+    return f"\n\n{SPACER}\n\n".join(sections)
 
 
 def main() -> int:
