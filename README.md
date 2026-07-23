@@ -1,8 +1,10 @@
 # DailyAiDose
 
-A daily AI news digest, delivered to Slack every morning.
+A daily AI news digest, delivered to your team chat (ClickUp or Slack) every morning.
 
-Every day at **07:30 IST** a GitHub Actions workflow gathers the last 24 hours of AI news, has an LLM score every item for relevance (0–10), and posts a single Slack message with summaries and clickable links, grouped by topic:
+![DailyAiDose digest message in ClickUp](docs/assets/clickup-digest.png)
+
+Every day at **09:00 IST** a GitHub Actions workflow gathers the last 24 hours of AI news, has an LLM score every item for relevance (0–10), and posts a single chat message with summaries and clickable links, drawn from topics like:
 
 - **Evals & Observability** — LangChain, Arize, Langfuse releases
 - **Labs & Models** — OpenAI, Google DeepMind, Google AI, Hugging Face
@@ -32,7 +34,7 @@ Built on [Horizon](https://github.com/Thysrael/Horizon) (MIT), with a Slack mrkd
 
 - **Sources, topics, quotas** — edit [`data/config.github.json`](data/config.github.json). RSS feeds (including YouTube channel feeds: `https://www.youtube.com/feeds/videos.xml?channel_id=...`) go under `sources.rss` with a `category`; per-topic quotas live in `filtering.category_groups`.
 - **LLM provider** — swap the `ai` block (supports Anthropic, OpenAI, Gemini, DeepSeek, Ollama, and any OpenAI-compatible endpoint) and map the matching secret in the workflow. To cut cost, set `model` to `claude-haiku-4-5-20251001`.
-- **Delivery time** — edit the cron in the workflow (UTC; `0 2 * * *` = 07:30 IST).
+- **Delivery time** — the workflow dispatches early (GitHub cron starts up to ~3h late), then holds posting until 03:30 UTC = 09:00 IST. Edit the crons and the hold step in the workflow to change it; a second cron acts as a backup and skips itself if the day's digest already went out.
 - **Selectivity** — raise or lower `filtering.ai_score_threshold` (currently 6.5 out of 10).
 
 ## Run locally
