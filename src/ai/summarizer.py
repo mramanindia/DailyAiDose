@@ -114,6 +114,25 @@ class DailySummarizer:
                 toc_entries.append(f"{i + 1}. [{t}](#item-{i + 1}) \u2b50\ufe0f {score}/10")
             toc = "\n".join(toc_entries) + "\n\n---\n\n"
 
+        # Compact digests are grouped into category sections when the
+        # orchestrator has tagged items with their group's display name.
+        if compact and any(item.metadata.get("digest_group") for item in items):
+            grouped: Dict[str, List[ContentItem]] = {}
+            for item in items:
+                group = str(item.metadata.get("digest_group") or "Other")
+                grouped.setdefault(group, []).append(item)
+
+            parts = []
+            index = 0
+            for group, group_items in grouped.items():
+                parts.append(f"### {group}\n\n")
+                for item in group_items:
+                    index += 1
+                    parts.append(
+                        self._format_item(item, labels, language, index, compact=True)
+                    )
+            return header + "".join(parts)
+
         parts = [
             self._format_item(item, labels, language, i + 1, compact=compact)
             for i, item in enumerate(items)

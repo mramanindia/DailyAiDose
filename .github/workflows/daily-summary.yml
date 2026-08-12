@@ -73,6 +73,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run horizon --hours 24
 
+      - name: Set current date as environment variable
+        run: echo "DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          keep_files: true  # Keep existing summaries on gh-pages branch
+          commit_message: "📝 Daily Summary: ${{ env.DATE }}"
+          publish_branch: gh-pages
+          enable_jekyll: true
+
       - name: Hold until 09:00 IST (03:30 UTC) before posting
         if: github.event_name == 'schedule'
         run: |
@@ -94,9 +107,6 @@ jobs:
           CLICKUP_CHANNEL_ID: "2kyqh16h-15335"
         run: uv run python scripts/post_clickup_chat.py
 
-      - name: Set current date as environment variable
-        run: echo "DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-
       - name: Persist seen-items state
         run: |
           git config user.name "github-actions[bot]"
@@ -106,13 +116,3 @@ jobs:
             git commit -m "chore: record seen items for ${{ env.DATE }}"
             git push origin HEAD:main
           fi
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          keep_files: true  # Keep existing summaries on gh-pages branch
-          commit_message: "📝 Daily Summary: ${{ env.DATE }}"
-          publish_branch: gh-pages
-          enable_jekyll: true

@@ -37,6 +37,7 @@ Score content 0-10 by how valuable it is for this company:
 - Practical strategies and techniques to reduce LLM/inference cost (caching, routing, batching, distillation, quantization)
 - Open-source tools or GitHub repositories for evals, observability, or cost reduction
 - Insightful analysis on enterprise AI adoption, querying structured + unstructured data, agentic analytics, AI governance and auditability
+- Upcoming industry events (conferences, summits, meetups, hackathons) about decision intelligence, data intelligence, enterprise analytics, or applied AI that the team could attend — especially in India or the UK; major global events also count. Score events by relevance and attendability: a specific upcoming event with a date and venue scores 7-8; past events, undated listicles, or generic event-directory pages score 0-4. For events, include the date and location in the summary when known.
 
 **5-6: Interesting**
 - General AI industry news, funding, or research with plausible product relevance

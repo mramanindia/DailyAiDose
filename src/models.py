@@ -19,6 +19,7 @@ class SourceType(str, Enum):
     OSSINSIGHT = "ossinsight"
     GDELT = "gdelt"
     GOOGLE_NEWS = "google_news"
+    EVENTS = "events"
 
 
 class ContentItem(BaseModel):
@@ -312,6 +313,24 @@ class GoogleNewsConfig(BaseModel):
     category: Optional[str] = None
 
 
+class EventsSearchConfig(BaseModel):
+    """Web-search-based events discovery configuration.
+
+    Runs DuckDuckGo text searches (via the key-less `ddgs` package, the same
+    backend the enricher uses) for upcoming industry events — conferences,
+    summits, meetups — and emits each result as a ContentItem. Search results
+    carry no publication date, so items are stamped with the fetch time and
+    rely on the seen-items store for cross-run dedup. The literal ``{year}``
+    in a query is replaced with the current year at fetch time.
+    """
+
+    enabled: bool = False
+    queries: List[str] = Field(default_factory=list)
+    max_results: int = 5  # per query
+    region: Optional[str] = None  # DDG region code, e.g. "in-en"; None = global
+    category: Optional[str] = "events"
+
+
 class SourcesConfig(BaseModel):
     """All sources configuration."""
 
@@ -325,6 +344,7 @@ class SourcesConfig(BaseModel):
     ossinsight: OSSInsightConfig = Field(default_factory=OSSInsightConfig)
     gdelt: Optional[GDELTConfig] = None
     google_news: Optional[GoogleNewsConfig] = None
+    events_search: Optional[EventsSearchConfig] = None
 
 
 class WebhookConfig(BaseModel):

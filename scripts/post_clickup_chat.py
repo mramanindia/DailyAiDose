@@ -23,7 +23,6 @@ import httpx
 # message stays readable in the chat pane.
 MAX_CHARS = 30000
 
-HEADER_LOGO = "🌅"
 HEADER_TITLE = "DailyAiDose for Unloq"
 FOOTER = "*This is an automated message from Agent DailyAiDose managed by Aman*"
 
@@ -34,12 +33,14 @@ SPACER = "\u00a0"
 # Source lines rendered by the compact digest start with the source type.
 _SOURCE_LINE_RE = re.compile(
     r"^(?P<type>rss|hackernews|reddit|github|twitter|telegram|gdelt|"
-    r"google_news|openbb|ossinsight)(?P<rest>( · .*)?)$"
+    r"google_news|openbb|ossinsight|events)(?P<rest>( · .*)?)$"
 )
 _ITEM_HEADING_RE = re.compile(
     r"^##\s+\[(?P<title>.+?)\]\((?P<url>\S+?)\)(\s+⭐️?\s*(?P<score>[\d.?]+)/10)?\s*$"
 )
 _STATS_RE = re.compile(r"^>\s*From (?P<total>\d+) items?, (?P<selected>\d+)\b.*")
+# Category section headers emitted by the compact digest ("### 📅 Events").
+_GROUP_HEADING_RE = re.compile(r"^###\s+(?P<name>.+?)\s*$")
 
 # Friendly names for source types shown in the small info line. "rss" is
 # dropped entirely — the feed name that follows it is enough.
@@ -54,6 +55,7 @@ _SOURCE_TYPE_LABELS = {
     "gdelt": "GDELT",
     "openbb": "OpenBB",
     "ossinsight": "OSS Insight",
+    "events": None,  # the site domain that follows it is enough
 }
 
 
@@ -86,25 +88,68 @@ def _pretty_source(line: str) -> str:
     return " · ".join(rest) if rest else line
 
 
+def _render_text_chart(items: list[dict]) -> str:
+    """Render a per-category overview as an aligned text bar chart.
+
+    ClickUp chat does not fetch external images, so the "chart" is a fenced
+    code block — monospace alignment is what makes the bars readable.
+
+    Evals & Observability  ▇▇▇     1 pick   · avg 8.0/10
+    Events & Conferences   ▇▇▇▇▇▇  2 picks  · avg 7.2/10
+    """
+    groups: dict[str, list[float | None]] = {}
+    for item in items:
+        if not item["group"]:
+            return ""  # ungrouped digest: no overview
+        score = item["score"]
+        groups.setdefault(item["group"], []).append(
+            float(score) if score and score != "?" else None
+        )
+
+    if len(groups) < 2:
+        return ""  # a one-category chart says nothing
+
+    label_width = max(len(g) for g in groups)
+    bar_width = 3 * max(len(s) for s in groups.values())
+    lines = []
+    for group, scores in groups.items():
+        bar = "▇" * (3 * len(scores))
+        count = f"{len(scores)} pick" + ("s" if len(scores) > 1 else " ")
+        known = [s for s in scores if s is not None]
+        avg = f" · avg {sum(known) / len(known):.1f}/10" if known else ""
+        lines.append(
+            f"{group.ljust(label_width)}  {bar.ljust(bar_width)}  {count}{avg}"
+        )
+    return "```\n" + "\n".join(lines) + "\n```"
+
+
 def format_chat_message(digest_md: str, date: str) -> str:
     """Convert the digest markdown into a simple, readable chat message.
 
-    🌅 **DailyAiDose for Unloq — 17 July 2026**
+    ## DailyAiDose for Unloq — 17 July 2026
     *5 picks from 323 items*
+    [text bar chart of picks per category]
 
-    **1. Title of the story** ⭐ 8.0
+    **1. Title of the story** · 8.0/10 `Events & Conferences`
     One-sentence plain-language summary.
-    🔗 [Read more](url) · *Source · date*
+    [Read more](url) · *Source · date*
 
     ...
 
     *footer*
+
+    Items are one flat score-sorted list; the category appears as an inline
+    code tag at the end of the title line, not as section headers. Formatting
+    is deliberately emoji-free (per user preference, 2026-08-12) with one
+    exception: event/conference items carry a calendar marker so they stand
+    out as attendable and time-bound.
     """
-    header = f"{HEADER_LOGO} **{HEADER_TITLE} — {date}**"
+    header = f"## {HEADER_TITLE} — {date}"
     subtitle = ""
     intro_lines: list[str] = []
     items: list[dict] = []
     current: dict | None = None
+    current_group = ""
 
     for raw_line in digest_md.splitlines():
         line = raw_line.rstrip()
@@ -120,6 +165,11 @@ def format_chat_message(digest_md: str, date: str) -> str:
             )
             continue
 
+        group = _GROUP_HEADING_RE.match(line)
+        if group:
+            current_group = group.group("name")
+            continue
+
         heading = _ITEM_HEADING_RE.match(line)
         if heading:
             current = {
@@ -128,6 +178,7 @@ def format_chat_message(digest_md: str, date: str) -> str:
                 "score": heading.group("score"),
                 "summary": [],
                 "source": "",
+                "group": current_group,
             }
             items.append(current)
             continue
@@ -150,15 +201,32 @@ def format_chat_message(digest_md: str, date: str) -> str:
     intro = [header]
     if subtitle:
         intro.append(subtitle)
+    chart = _render_text_chart(items)
+    if chart:
+        intro.append(chart)
     intro.extend(intro_lines)
+
+    # One flat list, best story first; the digest file groups items by
+    # category section, so re-sort by score for the chat message.
+    def sort_key(item: dict) -> float:
+        try:
+            return float(item["score"])
+        except (TypeError, ValueError):
+            return 0.0
+
+    items.sort(key=sort_key, reverse=True)
 
     sections: list[str] = ["\n\n".join(intro)]
     for i, item in enumerate(items, start=1):
-        score = f" ⭐ {item['score']}" if item["score"] else ""
-        lines = [f"**{i}. {item['title']}**{score}"]
+        score = f" · {item['score']}/10" if item["score"] else ""
+        tag = f" `{item['group']}`" if item["group"] else ""
+        # Conferences/events are attendable and time-bound, so they carry a
+        # calendar marker — the one deliberate emoji in the digest.
+        marker = "📅 " if "event" in item["group"].lower() else ""
+        lines = [f"**{i}. {marker}{item['title']}**{score}{tag}"]
         if item["summary"]:
             lines.append(" ".join(item["summary"]))
-        link_line = f"🔗 [Read more]({item['url']})"
+        link_line = f"[Read more]({item['url']})"
         if item["source"]:
             link_line += f" · *{item['source']}*"
         lines.append(link_line)

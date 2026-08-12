@@ -24,6 +24,7 @@ from .scrapers.openbb import OpenBBScraper
 from .scrapers.ossinsight import OSSInsightScraper
 from .scrapers.gdelt import GDELTScraper
 from .scrapers.google_news import GoogleNewsScraper
+from .scrapers.events import EventsSearchScraper
 from .ai.client import create_ai_client
 from .ai.analyzer import ContentAnalyzer
 from .ai.summarizer import DailySummarizer
@@ -351,6 +352,11 @@ class HorizonOrchestrator:
                 gn_scraper = GoogleNewsScraper(self.config.sources.google_news, client)
                 tasks.append(self._fetch_with_progress("Google News", gn_scraper, since))
 
+            # Events discovery (DuckDuckGo web search, key-less)
+            if self.config.sources.events_search and self.config.sources.events_search.enabled:
+                events_scraper = EventsSearchScraper(self.config.sources.events_search, client)
+                tasks.append(self._fetch_with_progress("Events Search", events_scraper, since))
+
             # Fetch all concurrently
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -654,6 +660,14 @@ class HorizonOrchestrator:
             group_counts[group_key] += 1
 
         selected.sort(key=lambda pair: pair[0].ai_score or 0, reverse=True)
+
+        # Tag each selected item with its group's display name so downstream
+        # renderers (summarizer, ClickUp poster, chart) can group by section.
+        for item, group_key in selected:
+            group = groups.get(group_key)
+            item.metadata["digest_group"] = (
+                group.name if group and group.name else group_key.replace("-", " ").title()
+            )
 
         final_counts: Dict[str, int] = defaultdict(int)
         for _, group_key in selected:

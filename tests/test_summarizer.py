@@ -138,3 +138,36 @@ def test_generate_empty_summary_zh_uses_localized_analyzed_line():
 
     assert "> 已分析 10 条内容，但没有达到重要性阈值的条目。" in result
     assert "Analyzed 10 items" not in result
+
+
+def test_compact_summary_groups_items_by_digest_group():
+    summarizer = DailySummarizer()
+    items = [_make_item(1), _make_item(2), _make_item(3)]
+    items[0].metadata["digest_group"] = "Evals & Observability"
+    items[1].metadata["digest_group"] = "Events & Conferences"
+    items[2].metadata["digest_group"] = "Evals & Observability"
+
+    result = _run_async(
+        summarizer.generate_summary(items, "2026-08-12", 100, compact=True)
+    )
+
+    # One header per group, and both eval items sit under the evals header
+    assert result.count("### Evals & Observability") == 1
+    assert result.count("### Events & Conferences") == 1
+    evals_pos = result.index("### Evals & Observability")
+    events_pos = result.index("### Events & Conferences")
+    item1_pos = result.index("## [Important Item 1]")
+    item3_pos = result.index("## [Important Item 3]")
+    assert evals_pos < item1_pos < item3_pos < events_pos
+
+
+def test_compact_summary_without_groups_is_unchanged():
+    summarizer = DailySummarizer()
+    items = [_make_item(1), _make_item(2)]
+
+    result = _run_async(
+        summarizer.generate_summary(items, "2026-08-12", 100, compact=True)
+    )
+
+    assert "### " not in result
+    assert "## [Important Item 1]" in result
