@@ -37,7 +37,7 @@ Score content 0-10 by how valuable it is for this company:
 - Practical strategies and techniques to reduce LLM/inference cost (caching, routing, batching, distillation, quantization)
 - Open-source tools or GitHub repositories for evals, observability, or cost reduction
 - Insightful analysis on enterprise AI adoption, querying structured + unstructured data, agentic analytics, AI governance and auditability
-- Upcoming industry events (conferences, summits, meetups, hackathons) about decision intelligence, data intelligence, enterprise analytics, or applied AI that the team could attend — especially in India or the UK; major global events also count. Score events by relevance and attendability: a specific upcoming event with a date and venue scores 7-8; past events, undated listicles, or generic event-directory pages score 0-4. For events, include the date and location in the summary when known.
+- Upcoming industry events (conferences, summits, meetups, hackathons) about decision intelligence, data intelligence, enterprise analytics, or applied AI that the team could attend — especially in India or the UK; major global events also count. Score events by relevance and attendability: a specific upcoming event with a date and venue scores 7-8. CRITICAL: check the event's dates against today's date (given in the message) — an event whose dates have already passed scores 0-2 no matter how prestigious, and if you cannot determine the event's date, score it at most 4. Undated listicles and generic event-directory pages also score 0-4. For events, include the date and location in the summary when known.
 
 **5-6: Interesting**
 - General AI industry news, funding, or research with plausible product relevance
@@ -56,7 +56,9 @@ Also consider:
 Write the one-sentence summary in plain language that a non-engineer can follow, and make clear why it matters to an AI product company when that is not obvious.
 """
 
-CONTENT_ANALYSIS_USER = """Analyze the following content and provide a JSON response with:
+CONTENT_ANALYSIS_USER = """Today's date: {today}
+
+Analyze the following content and provide a JSON response with:
 - score (0-10): Importance score
 - reason: Brief explanation for the score (mention discussion quality if comments are provided)
 - summary: One-sentence summary of the content

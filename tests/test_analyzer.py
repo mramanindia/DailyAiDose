@@ -94,3 +94,23 @@ def test_analyze_batch_concurrent_preserves_order(monkeypatch):
     result = asyncio.run(analyzer.analyze_batch(items))
 
     assert [item.id for item in result] == [item.id for item in items]
+
+
+def test_analyze_item_injects_todays_date_into_prompt():
+    """The scorer must see today's date to reject already-past events."""
+    captured = {}
+
+    class FakeClient:
+        async def complete(self, system, user):
+            captured["system"] = system
+            captured["user"] = user
+            return '{"score": 2, "reason": "past event", "summary": "s", "tags": ["t"]}'
+
+    analyzer = ContentAnalyzer(FakeClient())
+    item = _make_item("events:event:abc123")
+
+    asyncio.run(analyzer._analyze_item(item))
+
+    today = datetime.now(timezone.utc).strftime("%d %B %Y")
+    assert f"Today's date: {today}" in captured["user"]
+    assert item.ai_score == 2.0

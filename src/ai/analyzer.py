@@ -3,6 +3,7 @@
 import asyncio
 import json
 import re
+from datetime import datetime, timezone
 from typing import List, Optional
 from tenacity import retry, stop_after_attempt, wait_exponential
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, MofNCompleteColumn
@@ -129,8 +130,10 @@ class ContentAnalyzer:
 
         discussion_section = "\n".join(discussion_parts) if discussion_parts else ""
 
-        # Generate user prompt
+        # Generate user prompt. The model has no notion of "now", so today's
+        # date is injected explicitly — required to reject past events.
         user_prompt = CONTENT_ANALYSIS_USER.format(
+            today=datetime.now(timezone.utc).strftime("%d %B %Y"),
             title=item.title,
             source=f"{item.source_type.value}",
             author=item.author or "Unknown",
