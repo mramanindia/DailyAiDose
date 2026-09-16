@@ -26,17 +26,8 @@ LABELS = {
         "references": "References",
         "tags": "Tags",
         "selected_items": "From {total} items, {selected} important content pieces were selected",
-        "empty_analyzed": "Analyzed {total} items, but none met the importance threshold.",
-        "empty_body": (
-            "No significant developments today. This might indicate:\n"
-            "- A quiet day in your tracked sources\n"
-            "- The AI score threshold is too high\n"
-            "- Your information sources need expansion\n\n"
-            "Consider:\n"
-            "1. Lowering the `ai_score_threshold` in config.json\n"
-            "2. Adding more diverse information sources\n"
-            "3. Checking if the AI model is working correctly\n"
-        ),
+        "empty_analyzed": "Scanned {total} items, none of them worth sharing.",
+        "empty_body": "A quiet day across the tracked sources.\n",
     },
     "zh": {
         "header": "Horizon 每日速递",

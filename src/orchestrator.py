@@ -91,8 +91,10 @@ class HorizonOrchestrator:
             self.console.print(f"📥 Fetched {len(all_items)} items from all sources\n")
 
             if not all_items:
-                self.console.print("[yellow]No new content found. Exiting.[/yellow]")
-                return
+                # Do not bail out here. A dated summary still has to be written
+                # so delivery runs and posts a quiet-day message, rather than
+                # finding yesterday's file on disk and replaying it as today's.
+                self.console.print("[yellow]No new content found today.[/yellow]")
 
             # 3. Merge cross-source duplicates (same URL from different sources)
             merged_items = self.merge_cross_source_duplicates(all_items)
@@ -792,6 +794,9 @@ class HorizonOrchestrator:
         Returns:
             List[ContentItem]: Analyzed items
         """
+        if not items:
+            return []
+
         self.console.print("🤖 Analyzing content with AI...")
 
         ai_config = self.config.ai

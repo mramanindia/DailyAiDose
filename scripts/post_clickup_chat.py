@@ -4,12 +4,18 @@ Reads the newest markdown file from data/summaries/, reformats it into a
 compact chat-friendly message (no oversized headings, bold linked titles,
 small footer), and sends it via the ClickUp API v3.
 
+On a quiet day (no items, or a single item) the message carries a brain
+teaser instead of an apology, with the answer posted as a reply in the
+message thread so the channel can guess first.
+
 Required environment variables:
     CLICKUP_API_TOKEN     Personal API token (Settings -> Apps -> API Token)
     CLICKUP_WORKSPACE_ID  Numeric workspace (team) id
     CLICKUP_CHANNEL_ID    Chat channel id
 """
 
+import argparse
+import asyncio
 import os
 import re
 import sys
@@ -18,6 +24,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from src.ai.puzzle import Puzzle, get_puzzle  # noqa: E402
 
 # ClickUp chat messages are capped well above this; stay conservative so the
 # message stays readable in the chat pane.
@@ -39,6 +49,8 @@ _ITEM_HEADING_RE = re.compile(
     r"^##\s+\[(?P<title>.+?)\]\((?P<url>\S+?)\)(\s+⭐️?\s*(?P<score>[\d.?]+)/10)?\s*$"
 )
 _STATS_RE = re.compile(r"^>\s*From (?P<total>\d+) items?, (?P<selected>\d+)\b.*")
+# The empty digest reports only a scanned count, with nothing selected.
+_EMPTY_STATS_RE = re.compile(r"^>\s*(?:Analyzed|Scanned) (?P<total>\d+) items?\b.*")
 # Category section headers emitted by the compact digest ("### 📅 Events").
 _GROUP_HEADING_RE = re.compile(r"^###\s+(?P<name>.+?)\s*$")
 
@@ -123,16 +135,80 @@ def _render_text_chart(items: list[dict]) -> str:
     return "```\n" + "\n".join(lines) + "\n```"
 
 
-def format_chat_message(digest_md: str, date: str) -> str:
+def _format_item(item: dict, label: str = "") -> str:
+    """Render one story as a bold title line, a summary, and a link row."""
+    score = f" \u00b7 {item['score']}/10" if item["score"] else ""
+    tag = f" `{item['group']}`" if item["group"] else ""
+    # Conferences/events are attendable and time-bound, so they carry a
+    # calendar marker, the one deliberate emoji in the digest.
+    marker = "\U0001f4c5 " if "event" in item["group"].lower() else ""
+    lines = [f"**{label}{marker}{item['title']}**{score}{tag}"]
+    if item["summary"]:
+        lines.append(" ".join(item["summary"]))
+    link_line = f"[Read more]({item['url']})"
+    if item["source"]:
+        link_line += f" \u00b7 *{item['source']}*"
+    lines.append(link_line)
+    return "\n".join(lines)
+
+
+def _format_sparse_message(
+    header: str,
+    items: list[dict],
+    total_fetched: int | None,
+    puzzle: Puzzle | None,
+) -> str:
+    """Build the message for a day with nothing, or one story, to report.
+
+    A quiet day still has to be worth opening, so the message says what was
+    scanned and then hands over a brain teaser. The digest stats line and the
+    category chart are dropped: "1 pick from 294 items" undersells the one
+    story that did make it.
+    """
+    scanned = (
+        f"Scanned {total_fetched} items today"
+        if total_fetched
+        else "Scanned the feeds today"
+    )
+    if items:
+        lead = f"{scanned} and found just one thing worth sharing"
+        lead += ", so here's a brain teaser to go with it." if puzzle else "."
+    else:
+        lead = f"{scanned} and found nothing worth sharing here"
+        lead += ", so here's a brain teaser for you instead." if puzzle else "."
+
+    sections = [f"{header}\n\n{lead}"]
+    sections.extend(_format_item(item) for item in items)
+    if puzzle is not None:
+        sections.append(f"{puzzle.prompt}\n\nAnswer's in the thread.")
+    sections.append(FOOTER)
+    return f"\n\n{SPACER}\n\n".join(sections)
+
+
+def format_answer_reply(puzzle: Puzzle) -> str:
+    """The threaded reply carrying the puzzle answer."""
+    return f"**Answer:** {puzzle.answer}"
+
+
+def count_items(digest_md: str) -> int:
+    """How many stories the digest holds, without building the message."""
+    return sum(
+        1 for line in digest_md.splitlines() if _ITEM_HEADING_RE.match(line.rstrip())
+    )
+
+
+def format_chat_message(
+    digest_md: str, date: str, puzzle: Puzzle | None = None
+) -> str:
     """Convert the digest markdown into a simple, readable chat message.
 
-    ## DailyAiDose for Unloq — 17 July 2026
+    ## DailyAiDose for Unloq, 17 July 2026
     *5 picks from 323 items*
     [text bar chart of picks per category]
 
-    **1. Title of the story** · 8.0/10 `Events & Conferences`
+    **1. Title of the story** \u00b7 8.0/10 `Events & Conferences`
     One-sentence plain-language summary.
-    [Read more](url) · *Source · date*
+    [Read more](url) \u00b7 *Source \u00b7 date*
 
     ...
 
@@ -143,9 +219,13 @@ def format_chat_message(digest_md: str, date: str) -> str:
     is deliberately emoji-free (per user preference, 2026-08-12) with one
     exception: event/conference items carry a calendar marker so they stand
     out as attendable and time-bound.
+
+    Fewer than two stories takes the sparse layout instead, which leads with
+    the scan count and carries a brain teaser.
     """
-    header = f"## {HEADER_TITLE} — {date}"
+    header = f"## {HEADER_TITLE}, {date}"
     subtitle = ""
+    total_fetched: int | None = None
     intro_lines: list[str] = []
     items: list[dict] = []
     current: dict | None = None
@@ -159,10 +239,16 @@ def format_chat_message(digest_md: str, date: str) -> str:
 
         stats = _STATS_RE.match(line)
         if stats:
+            total_fetched = int(stats.group("total"))
             subtitle = (
                 f"*{stats.group('selected')} picks from "
                 f"{stats.group('total')} items*"
             )
+            continue
+
+        empty_stats = _EMPTY_STATS_RE.match(line)
+        if empty_stats:
+            total_fetched = int(empty_stats.group("total"))
             continue
 
         group = _GROUP_HEADING_RE.match(line)
@@ -198,6 +284,11 @@ def format_chat_message(digest_md: str, date: str) -> str:
         else:
             intro_lines.append(line)
 
+    # A quiet day drops the digest's own intro prose, which is written for
+    # whoever is tuning the pipeline rather than for the channel.
+    if len(items) < 2:
+        return _format_sparse_message(header, items, total_fetched, puzzle)
+
     intro = [header]
     if subtitle:
         intro.append(subtitle)
@@ -217,67 +308,158 @@ def format_chat_message(digest_md: str, date: str) -> str:
     items.sort(key=sort_key, reverse=True)
 
     sections: list[str] = ["\n\n".join(intro)]
-    for i, item in enumerate(items, start=1):
-        score = f" · {item['score']}/10" if item["score"] else ""
-        tag = f" `{item['group']}`" if item["group"] else ""
-        # Conferences/events are attendable and time-bound, so they carry a
-        # calendar marker — the one deliberate emoji in the digest.
-        marker = "📅 " if "event" in item["group"].lower() else ""
-        lines = [f"**{i}. {marker}{item['title']}**{score}{tag}"]
-        if item["summary"]:
-            lines.append(" ".join(item["summary"]))
-        link_line = f"[Read more]({item['url']})"
-        if item["source"]:
-            link_line += f" · *{item['source']}*"
-        lines.append(link_line)
-        sections.append("\n".join(lines))
-
+    sections.extend(
+        _format_item(item, f"{i}. ") for i, item in enumerate(items, start=1)
+    )
     sections.append(FOOTER)
     return f"\n\n{SPACER}\n\n".join(sections)
 
 
+def _load_ai_config():
+    """AI config for puzzle generation, or None to fall back to the bank."""
+    try:
+        from src.storage.manager import StorageManager
+
+        ai_config = StorageManager().load_config().ai
+    except Exception as exc:  # missing config.json, bad JSON, anything
+        print(f"No AI config for puzzle generation ({exc}); using the bank.")
+        return None
+
+    if not os.environ.get(ai_config.api_key_env or ""):
+        print(
+            f"{ai_config.api_key_env} is not set; using the puzzle bank."
+        )
+        return None
+    return ai_config
+
+
+def _post(url: str, payload: dict, token: str, label: str) -> dict | None:
+    """POST to ClickUp with retries, returning the response body on success.
+
+    ClickUp occasionally returns transient 5xx errors; retry a few times
+    before giving up.
+    """
+    attempts = 3
+    for attempt in range(1, attempts + 1):
+        response = httpx.post(
+            url,
+            headers={"Authorization": token, "Content-Type": "application/json"},
+            json=payload,
+            timeout=30,
+        )
+        print(
+            f"ClickUp {label} response (attempt {attempt}/{attempts}): "
+            f"{response.status_code} {response.text[:300]}"
+        )
+        if response.is_success:
+            try:
+                body = response.json()
+            except ValueError:
+                return {}
+            return body if isinstance(body, dict) else {}
+        if response.status_code < 500:
+            break  # client error, retrying the same payload will not help
+        if attempt < attempts:
+            time.sleep(10 * attempt)
+    return None
+
+
+def _message_id(body: dict) -> str | None:
+    """Pull the created message id out of a ClickUp response body."""
+    for candidate in (body, body.get("data") if isinstance(body, dict) else None):
+        if isinstance(candidate, dict) and candidate.get("id"):
+            return str(candidate["id"])
+    return None
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Post the latest daily summary to a ClickUp chat channel."
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the message and any thread reply instead of posting.",
+    )
+    args = parser.parse_args()
+
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    date = f"{now.day} {now.strftime('%B %Y')}"  # e.g. "22 July 2026"
+
+    summary_path = latest_summary(Path("data/summaries"))
+    if summary_path is not None and today not in summary_path.name:
+        # A run that fetched nothing writes no summary for today. Posting the
+        # newest file on disk would replay an old digest under today's date.
+        print(
+            f"Newest summary {summary_path.name} is not today's; "
+            "treating today as a quiet day."
+        )
+        summary_path = None
+
+    digest_md = summary_path.read_text(encoding="utf-8") if summary_path else ""
+
+    # Nothing to report, or a single story, gets a brain teaser alongside it.
+    puzzle = None
+    if count_items(digest_md) < 2:
+        puzzle = asyncio.run(get_puzzle(today, _load_ai_config()))
+        if puzzle is None:
+            print("No puzzle available; posting the quiet day message plain.")
+        else:
+            print(f"Quiet day: using a {puzzle.source} puzzle.")
+
+    content = truncate_markdown(
+        format_chat_message(digest_md, date, puzzle), MAX_CHARS
+    )
+
+    if args.dry_run:
+        print("\n===== message =====\n")
+        print(content)
+        if puzzle is not None:
+            print("\n===== thread reply =====\n")
+            print(format_answer_reply(puzzle))
+        return 0
+
     token = os.environ.get("CLICKUP_API_TOKEN")
     workspace_id = os.environ.get("CLICKUP_WORKSPACE_ID")
     channel_id = os.environ.get("CLICKUP_CHANNEL_ID")
     if not all([token, workspace_id, channel_id]):
         print(
             "ClickUp delivery not fully configured "
-            "(need CLICKUP_API_TOKEN, CLICKUP_WORKSPACE_ID, CLICKUP_CHANNEL_ID) — skipping."
+            "(need CLICKUP_API_TOKEN, CLICKUP_WORKSPACE_ID, CLICKUP_CHANNEL_ID) "
+            "- skipping."
         )
         return 0
 
-    summary_path = latest_summary(Path("data/summaries"))
-    if summary_path is None:
-        print("No summary file found in data/summaries/")
+    base = f"https://api.clickup.com/api/v3/workspaces/{workspace_id}/chat"
+    body = _post(
+        f"{base}/channels/{channel_id}/messages",
+        {"type": "message", "content": content, "content_format": "text/md"},
+        token,
+        "message",
+    )
+    if body is None:
         return 1
 
-    now = datetime.now(timezone.utc)
-    date = f"{now.day} {now.strftime('%B %Y')}"  # e.g. "22 July 2026"
-    digest_md = summary_path.read_text(encoding="utf-8")
-    content = truncate_markdown(format_chat_message(digest_md, date), MAX_CHARS)
+    # The answer goes in the thread so the channel can guess first. A failed
+    # reply is not worth failing the run over: the puzzle is already posted.
+    if puzzle is not None:
+        message_id = _message_id(body)
+        if message_id is None:
+            print("No message id in the response; skipping the answer reply.")
+        elif _post(
+            f"{base}/messages/{message_id}/replies",
+            {
+                "type": "message",
+                "content": format_answer_reply(puzzle),
+                "content_format": "text/md",
+            },
+            token,
+            "answer reply",
+        ) is None:
+            print("Puzzle posted, but the answer reply failed to send.")
 
-    # ClickUp occasionally returns transient 5xx errors; retry a few times
-    # before failing the run.
-    attempts = 3
-    for attempt in range(1, attempts + 1):
-        response = httpx.post(
-            f"https://api.clickup.com/api/v3/workspaces/{workspace_id}/chat/channels/{channel_id}/messages",
-            headers={"Authorization": token, "Content-Type": "application/json"},
-            json={"type": "message", "content": content, "content_format": "text/md"},
-            timeout=30,
-        )
-        print(
-            f"ClickUp response (attempt {attempt}/{attempts}): "
-            f"{response.status_code} {response.text[:300]}"
-        )
-        if response.is_success:
-            return 0
-        if response.status_code < 500:
-            break  # client error — retrying the same payload won't help
-        if attempt < attempts:
-            time.sleep(10 * attempt)
-    return 1
+    return 0
 
 
 if __name__ == "__main__":

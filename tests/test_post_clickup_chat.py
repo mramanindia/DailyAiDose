@@ -37,7 +37,7 @@ hackernews · someone · Jul 15, 15:47
 def test_no_repeated_header_and_numbered_plain_titles() -> None:
     msg = format_chat_message(DIGEST, "16 July 2026")
 
-    assert msg.startswith("## DailyAiDose for Unloq — 16 July 2026")
+    assert msg.startswith("## DailyAiDose for Unloq, 16 July 2026")
     # Old H1 header must not survive
     assert "# DailyAIdose" not in msg
     # H2 heading-links become numbered bold plain-text titles with the score
@@ -143,3 +143,114 @@ def test_flat_digest_without_groups_has_no_sections_or_chart() -> None:
     assert "**1. Big Eval News** · 9.0" in msg
     assert "### " not in msg
     assert "```" not in msg
+
+
+Puzzle = post_clickup_chat.Puzzle
+count_items = post_clickup_chat.count_items
+format_answer_reply = post_clickup_chat.format_answer_reply
+
+EMPTY_DIGEST = """# DailyAIdose - 2026-09-16
+
+> Scanned 312 items, none of them worth sharing.
+
+A quiet day across the tracked sources.
+"""
+
+SINGLE_DIGEST = """# DailyAIdose - 2026-09-16
+
+> From 294 items, 1 important content pieces were selected
+
+---
+
+### Evals & Observability
+
+## [Lone Story](https://example.com/only) ⭐️ 8.4/10
+
+The only thing that cleared the bar today.
+
+rss · Simon Willison · Sep 15, 18:40
+
+---
+"""
+
+PUZZLE = Puzzle(
+    prompt="A notebook and a pen cost 110 together. The notebook costs 100 more.",
+    answer="5. Most people say 10, but that would make 120 in total.",
+)
+
+
+def test_empty_digest_leads_with_scan_count_and_carries_the_puzzle() -> None:
+    msg = format_chat_message(EMPTY_DIGEST, "16 September 2026", PUZZLE)
+
+    assert msg.startswith("## DailyAiDose for Unloq, 16 September 2026")
+    assert "Scanned 312 items today and found nothing worth sharing here" in msg
+    assert "so here's a brain teaser for you instead." in msg
+    assert PUZZLE.prompt in msg
+    assert "Answer's in the thread." in msg
+    # The answer never rides along in the main message
+    assert PUZZLE.answer not in msg
+    assert msg.endswith(post_clickup_chat.FOOTER)
+
+
+def test_empty_digest_drops_pipeline_facing_prose_and_stats_line() -> None:
+    msg = format_chat_message(EMPTY_DIGEST, "16 September 2026", PUZZLE)
+
+    assert "A quiet day across the tracked sources." not in msg
+    assert "picks from" not in msg
+    assert "```" not in msg
+
+
+def test_single_item_gets_the_story_plus_a_teaser_without_a_pick_count() -> None:
+    msg = format_chat_message(SINGLE_DIGEST, "16 September 2026", PUZZLE)
+
+    assert "Scanned 294 items today and found just one thing worth sharing" in msg
+    assert "so here's a brain teaser to go with it." in msg
+    # The lone story keeps its full rendering but loses the "1." numbering
+    assert "**Lone Story** · 8.4/10 `Evals & Observability`" in msg
+    assert "**1. Lone Story**" not in msg
+    assert "[Read more](https://example.com/only) · *Simon Willison · Sep 15, 18:40*" in msg
+    assert "1 picks from 294 items" not in msg
+    assert PUZZLE.prompt in msg
+
+
+def test_quiet_day_without_a_puzzle_still_reads_as_a_finished_message() -> None:
+    msg = format_chat_message(EMPTY_DIGEST, "16 September 2026", None)
+
+    assert "Scanned 312 items today and found nothing worth sharing here." in msg
+    assert "brain teaser" not in msg
+    assert msg.endswith(post_clickup_chat.FOOTER)
+
+
+def test_missing_digest_falls_back_to_a_quiet_day_message() -> None:
+    msg = format_chat_message("", "16 September 2026", PUZZLE)
+
+    assert "Scanned the feeds today and found nothing worth sharing here" in msg
+    assert PUZZLE.prompt in msg
+
+
+def test_two_or_more_items_ignore_the_puzzle_entirely() -> None:
+    with_puzzle = format_chat_message(DIGEST, "16 July 2026", PUZZLE)
+    without = format_chat_message(DIGEST, "16 July 2026")
+
+    assert with_puzzle == without
+    assert "brain teaser" not in with_puzzle
+
+
+def test_count_items_drives_the_sparse_branch() -> None:
+    assert count_items(EMPTY_DIGEST) == 0
+    assert count_items(SINGLE_DIGEST) == 1
+    assert count_items(DIGEST) == 2
+
+
+def test_answer_reply_is_a_short_labelled_line() -> None:
+    assert format_answer_reply(PUZZLE) == f"**Answer:** {PUZZLE.answer}"
+
+
+def test_no_em_dashes_in_any_message_shape() -> None:
+    for msg in (
+        format_chat_message(EMPTY_DIGEST, "16 September 2026", PUZZLE),
+        format_chat_message(SINGLE_DIGEST, "16 September 2026", PUZZLE),
+        format_chat_message(DIGEST, "16 July 2026"),
+        format_answer_reply(PUZZLE),
+    ):
+        assert "—" not in msg

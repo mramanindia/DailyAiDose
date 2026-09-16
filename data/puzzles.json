@@ -1,0 +1,204 @@
+{
+  "puzzles": [
+    {
+      "id": "notebook-pen",
+      "prompt": "A notebook and a pen cost ₹110 together. The notebook costs ₹100 more than the pen.\n\nHow much does the pen cost?",
+      "answer": "₹5. Most people say ₹10, but that would make the notebook ₹110 and ₹120 in total. Pen ₹5, notebook ₹105."
+    },
+    {
+      "id": "rope-ladder",
+      "prompt": "A rope ladder hangs over the side of a ship, down into the water. The rungs are one foot apart, and exactly three of them are under water.\n\nThe tide rises one foot every hour. After four hours, how many rungs are under water?",
+      "answer": "Still three. The ship floats, so it rises with the tide and takes the ladder up with it."
+    },
+    {
+      "id": "queue",
+      "prompt": "One English word sounds exactly the same when you remove four of its five letters.\n\nWhich word?",
+      "answer": "Queue. Drop the last four letters and the q on its own still sounds the same."
+    },
+    {
+      "id": "lily-pond",
+      "prompt": "A patch of lilies on a pond doubles in size every day. On day 30 it covers the whole pond.\n\nOn which day did it cover half the pond?",
+      "answer": "Day 29. It doubles, so the day before it was full it was half."
+    },
+    {
+      "id": "socks-dark",
+      "prompt": "A drawer holds 10 black socks and 10 blue socks, mixed up. The room is dark and you cannot tell the colours apart.\n\nHow many socks must you take out to be sure you have a matching pair?",
+      "answer": "Three. The first two might not match, but the third has to match one of them."
+    },
+    {
+      "id": "two-coins",
+      "prompt": "Two coins add up to ₹30. One of them is not a ₹10 coin.\n\nWhat are the two coins?",
+      "answer": "A ₹20 and a ₹10. Only one of them is not a ₹10 coin. The other one is."
+    },
+    {
+      "id": "triplets",
+      "prompt": "Two children are born to the same mother, on the same day, in the same year, but they are not twins.\n\nHow?",
+      "answer": "They are two of a set of triplets."
+    },
+    {
+      "id": "digit-one",
+      "prompt": "Write out every number from 1 to 100.\n\nHow many times does the digit 1 appear?",
+      "answer": "21. Ten in the units place, ten more across 10 to 19, and one in 100."
+    },
+    {
+      "id": "burning-ropes",
+      "prompt": "You have two ropes and a lighter. Each rope takes exactly one hour to burn end to end, but they burn unevenly, so half a rope is not half an hour.\n\nHow do you measure exactly 45 minutes?",
+      "answer": "Light both ends of the first rope and one end of the second at the same time. The first burns out after 30 minutes. Light the second rope's other end now, and it burns out 15 minutes later, for 45 in total."
+    },
+    {
+      "id": "seventh-floor",
+      "prompt": "A man lives on the 10th floor. Every morning he takes the lift all the way down. Coming home he rides to the 7th floor and walks the rest, except when it is raining, when he rides all the way up.\n\nWhy?",
+      "answer": "He is short and can only reach the button for the 7th floor. On rainy days he has an umbrella to press the higher one."
+    },
+    {
+      "id": "handshakes",
+      "prompt": "Eight people meet, and each one shakes hands exactly once with every other person.\n\nHow many handshakes happen?",
+      "answer": "28. Each of the 8 shakes 7 hands, and every handshake is counted twice, so 8 times 7 divided by 2."
+    },
+    {
+      "id": "stamp",
+      "prompt": "What travels all the way around the world while staying in one corner?",
+      "answer": "A postage stamp."
+    },
+    {
+      "id": "photo-son",
+      "prompt": "A man looks at a photograph and says: brothers and sisters I have none, but that man's father is my father's son.\n\nWho is in the photograph?",
+      "answer": "His son. My father's son is the speaker himself, so the man in the photo has the speaker as his father."
+    },
+    {
+      "id": "second-place",
+      "prompt": "You are running a race and you overtake the person in second place.\n\nWhat position are you in?",
+      "answer": "Second. You took their place, not the leader's."
+    },
+    {
+      "id": "sheep",
+      "prompt": "A farmer has 17 sheep. All but 9 run away.\n\nHow many does he have left?",
+      "answer": "Nine. All but nine ran away, so nine stayed."
+    },
+    {
+      "id": "clock-strikes",
+      "prompt": "A clock takes 5 seconds to strike 6 o'clock.\n\nHow long does it take to strike 12?",
+      "answer": "11 seconds. What you time is the gaps, not the strikes. Six strikes have 5 gaps, so each gap is 1 second, and 12 strikes have 11 gaps."
+    },
+    {
+      "id": "divide-by-half",
+      "prompt": "Divide 30 by half, then add 10.\n\nWhat do you get?",
+      "answer": "70. Dividing by half means multiplying by two, so 30 becomes 60."
+    },
+    {
+      "id": "shirt-discount",
+      "prompt": "A shop sells a shirt for ₹1200 after a 20% discount.\n\nWhat was the original price?",
+      "answer": "₹1500. The discount comes off the original, not the sale price. Taking 20% off 1500 leaves 1200."
+    },
+    {
+      "id": "missing-ten",
+      "prompt": "Three friends pay ₹300 for a hotel room, ₹100 each. The manager realises the room is only ₹250 and sends ₹50 back with a bellboy, who keeps ₹20 and returns ₹10 to each friend.\n\nSo each friend paid ₹90, which is ₹270, and the bellboy has ₹20, which makes ₹290. Where did the missing ₹10 go?",
+      "answer": "Nowhere. The ₹270 already contains the bellboy's ₹20, so adding it again counts it twice. The honest sum is ₹250 for the room, ₹20 kept, and ₹30 returned, which is ₹300."
+    },
+    {
+      "id": "piano-keys",
+      "prompt": "What has plenty of keys but cannot open a single lock?",
+      "answer": "A piano."
+    },
+    {
+      "id": "towel",
+      "prompt": "What gets wetter the more it dries?",
+      "answer": "A towel."
+    },
+    {
+      "id": "ton",
+      "prompt": "Forwards I am heavy. Backwards I am not.\n\nWhat am I?",
+      "answer": "The word ton. Reversed it spells not."
+    },
+    {
+      "id": "fishing-three",
+      "prompt": "Two fathers and two sons go fishing. Each of them catches exactly one fish, and yet they bring home only three fish. None of the fish got away.\n\nHow?",
+      "answer": "There were only three people: a grandfather, his son, and his grandson. The middle one is both a father and a son."
+    },
+    {
+      "id": "four-t-days",
+      "prompt": "Name four days of the week that start with the letter T.",
+      "answer": "Tuesday, Thursday, today and tomorrow."
+    },
+    {
+      "id": "five-machines",
+      "prompt": "It takes 5 machines 5 minutes to make 5 widgets.\n\nHow long does it take 100 machines to make 100 widgets?",
+      "answer": "5 minutes. Each machine makes one widget in 5 minutes, however many machines you line up."
+    },
+    {
+      "id": "jugs",
+      "prompt": "You have a 3 litre jug, a 5 litre jug, and a running tap. Neither jug has any markings.\n\nHow do you measure out exactly 4 litres?",
+      "answer": "Fill the 5 and pour it into the 3, leaving 2 litres behind. Empty the 3 and tip those 2 litres into it. Fill the 5 again and top up the 3, which only takes 1 more litre, leaving exactly 4 in the big jug."
+    },
+    {
+      "id": "birthdays",
+      "prompt": "How many birthdays does the average person have?",
+      "answer": "One. You are born once. Everything after that is an anniversary."
+    },
+    {
+      "id": "photographer",
+      "prompt": "A woman shoots her husband, then holds him under water for five minutes, then hangs him. Ten minutes later the two of them go out for dinner together.\n\nHow?",
+      "answer": "She is a photographer. She shot a photo of him, developed it, and hung it up to dry."
+    },
+    {
+      "id": "months-28",
+      "prompt": "Some months have 31 days and some have 30.\n\nHow many have 28?",
+      "answer": "All twelve. Every month has at least 28 days."
+    },
+    {
+      "id": "look-and-say",
+      "prompt": "What comes next in this sequence?\n\n1, 11, 21, 1211, 111221",
+      "answer": "312211. Each line describes the one above it out loud. 111221 reads as three 1s, two 2s, one 1."
+    },
+    {
+      "id": "monopoly",
+      "prompt": "A man pushes his car up to a hotel, and the moment he arrives he knows he is bankrupt.\n\nWhy?",
+      "answer": "He is playing Monopoly."
+    },
+    {
+      "id": "six-apples",
+      "prompt": "There are six apples in a bowl and you take away four.\n\nHow many do you have?",
+      "answer": "Four. The ones you took are the ones you have."
+    },
+    {
+      "id": "three-switches",
+      "prompt": "Three switches at the bottom of a staircase control a single bulb at the top. Only one of them works it. You cannot see the bulb from below, and you may climb the stairs only once.\n\nHow do you work out which switch it is?",
+      "answer": "Turn on the first switch, leave it for a few minutes, then switch it off and turn on the second. Go up. If the bulb is lit it is the second switch. If it is off but warm it is the first. If it is off and cold it is the third."
+    },
+    {
+      "id": "sponge",
+      "prompt": "What is full of holes and still holds water?",
+      "answer": "A sponge."
+    },
+    {
+      "id": "survivors",
+      "prompt": "A plane crashes exactly on the border between India and Nepal.\n\nWhere do they bury the survivors?",
+      "answer": "Nowhere. Survivors are the ones who lived."
+    },
+    {
+      "id": "boat-married",
+      "prompt": "You see a boat filled with people, but there is not a single person on board.\n\nHow?",
+      "answer": "Everyone on board is married."
+    },
+    {
+      "id": "clock-hands",
+      "prompt": "In 24 hours, how many times do the hour hand and the minute hand of a clock overlap?",
+      "answer": "22. They overlap 11 times in each 12 hour cycle, not 12, because the minute hand has to catch up a little further each time."
+    },
+    {
+      "id": "cheap-hour",
+      "prompt": "A train leaves at noon and arrives at 2pm. The clock on the wall at the station is 20 minutes fast, and the clock on the train is 10 minutes slow.\n\nHow long was the journey by the station clock alone?",
+      "answer": "Two hours. A clock that is consistently fast is still measuring the gap between two moments correctly."
+    },
+    {
+      "id": "envelope-stamps",
+      "prompt": "A bookshop sells a paperback for ₹250. During a sale it takes 10% off, and the next week it takes another 10% off the new price.\n\nIs that the same as 20% off the original?",
+      "answer": "No. The second 10% comes off ₹225, not ₹250, so you pay ₹202.50 instead of ₹200. Stacked discounts are always worth slightly less than they look."
+    },
+    {
+      "id": "egg-dozen",
+      "prompt": "If a hen and a half lays an egg and a half in a day and a half, how many eggs does one hen lay in three days?",
+      "answer": "Two. One hen lays one egg in a day and a half, so in three days she lays two."
+    }
+  ]
+}
