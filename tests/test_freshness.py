@@ -73,6 +73,32 @@ def test_google_news_urls_are_recognised() -> None:
     assert not is_google_news_url("https://vmblog.com/bylines/thoughtspot/")
 
 
+def test_month_names_in_url_paths_are_understood() -> None:
+    """Simon Willison's posts date the path and nothing else."""
+    assert published_date_from_url(
+        "https://simonwillison.net/2026/Sep/28/claude-sonnet-5-5/"
+    ) == datetime(2026, 9, 28, tzinfo=timezone.utc)
+    assert published_date_from_url(
+        "https://example.com/2019/September/7/post"
+    ) == datetime(2019, 9, 7, tzinfo=timezone.utc)
+    # A year in a slug is not a date
+    assert published_date_from_url("https://example.com/top-10-2026-tools") is None
+
+
+def test_a_url_date_stands_in_when_the_page_has_none() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="<html>no date metadata at all</html>")
+
+    # Built from today so the test does not age out of the freshness window
+    recent = datetime.now(timezone.utc) - timedelta(days=1)
+    url = f"https://simonwillison.net/{recent:%Y/%b/%-d}/a-post/"
+
+    verdict, observed, reason = _verify(handler, url)
+    assert verdict == "fresh"
+    assert observed.date() == recent.date()
+    assert "url path" in reason
+
+
 def test_dates_are_read_out_of_url_paths() -> None:
     assert published_date_from_url(
         "https://techcrunch.com/2018/11/14/thoughtspot-datarobot/"

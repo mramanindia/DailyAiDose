@@ -60,8 +60,11 @@ TRUSTED_HOSTS = (
     "huggingface.co",
 )
 
-# "/2018/11/14/headline" and "/2018-11-14-headline"
-_URL_DATE_RE = re.compile(r"/(?P<year>19|20\d{2})[/-](?P<month>0[1-9]|1[0-2])(?:[/-](?P<day>[0-3]\d))?(?:/|-|$)")
+# "/2018/11/14/headline", "/2018-11-14-headline", "/2026/Sep/28/headline"
+_URL_DATE_RE = re.compile(
+    r"/(?P<year>19|20\d{2})[/-](?P<month>0?[1-9]|1[0-2]|[A-Za-z]{3,9})"
+    r"(?:[/-](?P<day>[0-3]?\d))?(?:/|-|$)"
+)
 
 _META_DATE_KEYS = (
     "article:published_time",
@@ -207,19 +210,36 @@ async def resolve_google_news_url(client: httpx.AsyncClient, url: str) -> Option
 
 
 def published_date_from_url(url: str) -> Optional[datetime]:
-    """Read a publication date out of a URL path, if it carries one."""
+    """Read a publication date out of a URL path, if it carries one.
+
+    Plenty of blogs date the path and nothing else: Simon Willison's
+    /2026/Sep/28/ posts carry no date metadata on the page at all.
+    """
     match = _URL_DATE_RE.search(urlparse(str(url)).path)
     if not match:
         return None
+    month = _month_number(match.group("month"))
+    if month is None:
+        return None
     try:
         return datetime(
-            int(match.group("year")),
-            int(match.group("month")),
-            int(match.group("day") or 1),
+            int(match.group("year")), month, int(match.group("day") or 1),
             tzinfo=timezone.utc,
         )
     except ValueError:
         return None
+
+
+def _month_number(token: str) -> Optional[int]:
+    """Turn "11", "Sep" or "September" into a month number."""
+    token = (token or "").strip().lower()
+    if token.isdigit():
+        number = int(token)
+        return number if 1 <= number <= 12 else None
+    for name, number in _MONTHS.items():
+        if name.startswith(token[:3]) and len(token) >= 3:
+            return number
+    return None
 
 
 def published_date_from_html(html: str) -> Optional[datetime]:
@@ -340,6 +360,9 @@ async def verify_published_date(
         return "unverified", None, f"page unreachable ({type(exc).__name__})"
 
     if observed is None:
+        # Some blogs date the path and nothing else.
+        if from_url is not None:
+            return "fresh", from_url, f"url path dates it {from_url:%Y-%m-%d}"
         return "unverified", None, "no date on the page"
     if observed < cutoff:
         return "stale", observed, f"page dates it {observed:%Y-%m-%d}"
