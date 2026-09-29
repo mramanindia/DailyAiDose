@@ -458,6 +458,14 @@ class FilteringConfig(BaseModel):
     # Skip items already fetched in a previous run within the last N days
     # (0 disables). Requires persisting data/seen.json between runs.
     skip_seen_days: int = Field(default=0, ge=0)
+    # Drop a selected story when the publisher's own page dates it more than
+    # this many days back, whatever its feed claimed. Feed dates lie: Google
+    # News reports its last index time, which resurfaced a 2018 article as
+    # current news on 2026-09-28.
+    max_content_age_days: int = Field(default=14, gt=0)
+    # Check the publisher page for the stories that made the digest. Costs one
+    # HTTP request per selected item.
+    verify_published_dates: bool = True
 
 
 class Config(BaseModel):

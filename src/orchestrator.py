@@ -25,6 +25,11 @@ from .scrapers.ossinsight import OSSInsightScraper
 from .scrapers.gdelt import GDELTScraper
 from .scrapers.google_news import GoogleNewsScraper
 from .scrapers.events import EventsSearchScraper
+from .scrapers.freshness import (
+    is_google_news_url,
+    resolve_google_news_url,
+    verify_published_date,
+)
 from .ai.client import create_ai_client
 from .ai.analyzer import ContentAnalyzer
 from .ai.summarizer import DailySummarizer
@@ -156,6 +161,9 @@ class HorizonOrchestrator:
             # 5.7 Apply per-category and global digest limits before enrichment
             balanced_result = self.apply_balanced_digest(important_items)
             important_items = balanced_result.items
+
+            # 5.8 Check the selected stories against the publisher's own page
+            important_items = await self._drop_stale_items(important_items)
 
             # Show per-sub-source selection breakdown
             selected_counts: Dict[str, int] = defaultdict(int)
@@ -766,6 +774,60 @@ class HorizonOrchestrator:
         ai_client = create_ai_client(self.config.ai)
         analyzer = ContentAnalyzer(ai_client)
         await analyzer.analyze_batch(expanded)
+
+    async def _drop_stale_items(self, items: List[ContentItem]) -> List[ContentItem]:
+        """Drop selected stories the publisher itself dates as old.
+
+        Feed dates are not evidence. Google News reports the time it last
+        indexed a page, which put a 2018 article into the 2026-09-28 digest
+        as current news. This runs after selection, so it costs one request
+        per story that actually made the cut rather than one per item fetched.
+
+        Google News redirector links are resolved to the publisher URL first,
+        which both makes the digest link readable and gives the date check a
+        real page to look at. Anything that cannot be checked is kept: most
+        publishers refuse automated requests, and dropping every story behind
+        a 403 would empty the digest to fix a rarer problem.
+        """
+        if not items or not self.config.filtering.verify_published_dates:
+            return items
+
+        max_age = self.config.filtering.max_content_age_days
+        self.console.print("🕵️  Verifying publication dates...")
+
+        kept: List[ContentItem] = []
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            for item in items:
+                url = str(item.url)
+
+                if is_google_news_url(url):
+                    resolved = await resolve_google_news_url(client, url)
+                    if resolved:
+                        item.url = resolved
+                        item.metadata["google_news_redirect"] = url
+                        url = resolved
+
+                verdict, observed, reason = await verify_published_date(
+                    client, url, item.published_at, max_age
+                )
+                if verdict == "stale":
+                    self.console.print(
+                        f"   [yellow]Dropped[/yellow] {item.title[:60]!r}: {reason}, "
+                        f"feed claimed {item.published_at:%Y-%m-%d}"
+                    )
+                    continue
+                if observed is not None:
+                    item.metadata["verified_published_at"] = observed.isoformat()
+                kept.append(item)
+
+        dropped = len(items) - len(kept)
+        if dropped:
+            self.console.print(
+                f"   {dropped} stale item(s) removed, {len(kept)} remain\n"
+            )
+        else:
+            self.console.print(f"   All {len(kept)} items check out\n")
+        return kept
 
     async def _enrich_important_items(self, items: List[ContentItem]) -> None:
         """Enrich items with background knowledge (2nd AI pass).

@@ -278,6 +278,8 @@
     "time_window_hours": 24,
     "max_items": 10,
     "skip_seen_days": 14,
+    "max_content_age_days": 14,
+    "verify_published_dates": true,
     "category_groups": {
       "evals": {
         "name": "Evals & Observability",

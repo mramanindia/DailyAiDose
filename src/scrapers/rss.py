@@ -12,6 +12,7 @@ import httpx
 import feedparser
 
 from .base import BaseScraper
+from .freshness import bound_google_news_url
 from ..models import ContentItem, SourceType, RSSSourceConfig
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,13 @@ class RSSScraper(BaseScraper):
                 lambda m: os.environ.get(m.group(1), m.group(0)).strip(),
                 str(source.url),
             )
+
+            # Google News search feeds return their best matches regardless of
+            # age, and their pubDate is the time Google last indexed the page,
+            # not the time it was published. The when: operator reads the real
+            # publication date, so bounding the query here is what keeps
+            # years-old articles out of the digest.
+            feed_url = bound_google_news_url(feed_url, since)
 
             # Fetch feed content
             response = await self.client.get(feed_url, follow_redirects=True)
